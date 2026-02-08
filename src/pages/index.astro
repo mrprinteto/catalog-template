@@ -1,0 +1,116 @@
+---
+import { getFilteredProducts } from '../services/notion';
+import { config } from '../config/filter';
+
+const products = await getFilteredProducts();
+---
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Catálogo - {config.clientFilter}</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+  <script is:inline src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-white via-indigo-50 to-indigo-100 text-slate-900">
+  <div class="max-w-7xl mx-auto px-6 py-12 md:py-20">
+    <header class="flex flex-col md:flex-row md:items-start justify-between mb-16 gap-8">
+      <div class="max-w-xl">
+        <h1 class="text-5xl md:text-5xl font-bold text-indigo-600 mb-8 tracking-tight">
+          <span class="opacity-50">01. Catálogo</span>&nbsp;{config.clientFilter}
+        </h1>
+        <p class="text-slate-600 leading-relaxed text-lg">
+          Hemos seleccionado este conjunto de productos para <strong>{config.clientFilter}</strong>. Creemos que representan la
+          esencia de tu marca e impactarán a tu audiencia. Todos los productos son personalizables, lo que te permite
+          adaptarlos a tu estilo y necesidades específicas.
+        </p>
+      </div>
+      <div class="flex gap-4">
+        <button
+          class="px-8 py-3 rounded-full border-2 border-indigo-600 text-indigo-600 font-medium hover:bg-rose-600 hover:text-white transition-all duration-300">
+          Catalog
+        </button>
+        <button
+          class="px-8 py-3 rounded-full border-2 border-indigo-600 text-indigo-600 font-medium hover:bg-rose-600 hover:text-white transition-all duration-300 flex items-center gap-2">
+          Filter
+          <span class="material-symbols-outlined text-xl">tune</span>
+        </button>
+      </div>
+    </header>
+
+    {products.length > 0 ? (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {products.map((product) => {
+          const price = typeof product.price === 'number' ? `€${product.price}` : (product.price || '€0');
+          return (
+            <div class="group relative bg-white border-2 border-indigo-600 rounded-3xl p-8 flex flex-col transition-transform duration-300 hover:-translate-y-2">
+              <div class="flex justify-between items-center mb-8">
+                <span class="px-4 py-1.5 rounded-full border border-slate-200 text-sm font-medium text-slate-600">
+                  {product.category || 'Original'}
+                </span>
+                <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white">
+                  <span class="material-symbols-outlined text-xl">north_east</span>
+                </div>
+              </div>
+              <div class="aspect-square w-full rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mb-8 overflow-hidden">
+                {product.image ? (
+                  <img
+                    alt={product.name || 'Producto'}
+                    class="w-full h-full object-cover drop-shadow-2xl group-hover:scale-110 transition-transform duration-500"
+                    src={product.image}
+                  />
+                ) : (
+                  <span class="material-symbols-outlined text-6xl text-slate-300">image</span>
+                )}
+              </div>
+              <div class="mt-auto">
+                <div class="flex justify-between items-baseline mb-1">
+                  <h3 class="text-xl font-bold text-slate-900">{product.name || 'Producto'}</h3>
+                  <span class="text-xl font-bold text-slate-900">{price}</span>
+                </div>
+                <p class="text-slate-500">{product.description || 'Personalizable y listo para tu marca.'}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      <div class="text-center py-20">
+        <span class="material-symbols-outlined text-6xl text-slate-300 mb-4">inventory_2</span>
+        <p class="text-slate-500 text-lg">
+          Aún no hemos podido seleccionar productos para <strong>{config.clientFilter}</strong>.
+        </p>
+      </div>
+    )}
+
+    <footer class="mt-24 pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
+      <p class="text-slate-500 text-sm">© 2026 MrPrinteto. All rights reserved.</p>
+      <div class="flex gap-8">
+        <a class="text-sm font-medium hover:text-rose-600 transition-colors" href="#">Sustainability</a>
+        <a class="text-sm font-medium hover:text-rose-600 transition-colors" href="#">Care Guide</a>
+        <a class="text-sm font-medium hover:text-rose-600 transition-colors" href="#">Shipping</a>
+      </div>
+    </footer>
+  </div>
+
+</body>
+
+</html>

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+.astro
+
+# Environment
+.env
+.env.*
+
+# Editors / OS
+.DS_Store
+*.log
+*.tmp
+.idea
+.vscode
+
+# Hosting
+.vercel
+.netlify
