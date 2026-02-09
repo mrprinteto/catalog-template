@@ -38,12 +38,12 @@ export async function getFilteredProducts(): Promise<Product[]> {
       'Notion-Version': NOTION_VERSION,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      filter: {
-        property: 'Client',
-        select: { equals: config.clientFilter },
-      },
-    }),
+      body: JSON.stringify({
+        filter: {
+          property: 'Client',
+          multi_select: { contains: config.clientFilter },
+        },
+      }),
   });
 
   if (!res.ok) {
