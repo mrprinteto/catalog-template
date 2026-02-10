@@ -3,8 +3,6 @@ import { getFilteredProducts } from '../services/notion';
 import type { Product } from '../services/notion';
 import { config } from '../config/filter';
 import faCss from '@fortawesome/fontawesome-free/css/all.min.css?url';
-import catalogPdfUrl from '../scripts/catalog-pdf.ts?url';
-import presupuestoUrl from '../scripts/presupuesto.ts?url';
 
 type ProductWithPrices = Product & {
   priceX10: number;
@@ -208,8 +206,10 @@ const products = (await getFilteredProducts()) as ProductWithPrices[];
     </footer>
   </div>
 
-  <script type="module" src={catalogPdfUrl}></script>
-  <script type="module" src={presupuestoUrl}></script>
+  <script type="module">
+    import '/src/scripts/catalog-pdf.ts';
+    import '/src/scripts/presupuesto.ts';
+  </script>
 
 </body>
 
