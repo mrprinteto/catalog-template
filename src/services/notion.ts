@@ -8,6 +8,9 @@ export interface Product {
   name: string;
   category: string;
   price: number;
+  priceX10: number;
+  priceX50: number;
+  priceX100: number;
   description: string;
   image: string;
 }
@@ -60,6 +63,9 @@ export async function getFilteredProducts(): Promise<Product[]> {
       name: p.Name?.title?.[0]?.plain_text ?? '',
       category: p.Category?.select?.name ?? '',
       price: p.Price?.formula?.number ?? 0,
+      priceX10: p.Price_x10?.formula?.number ?? 0,
+      priceX50: p.Price_x50?.formula?.number ?? 0,
+      priceX100: p.Price_x100?.formula?.number ?? 0,
       description: p.Description?.rich_text?.[0]?.plain_text ?? '',
       image: p.Image?.url ?? '',
     };

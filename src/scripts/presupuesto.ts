@@ -1,7 +1,10 @@
 type ProductRow = {
   id: string;
   name: string;
-  price: number;
+  priceBase: number;
+  priceX10: number;
+  priceX50: number;
+  priceX100: number;
   qty: number;
   countEl: HTMLInputElement;
   minusBtn: HTMLButtonElement;
@@ -10,7 +13,7 @@ type ProductRow = {
 const STORAGE_KEY = 'presupuesto-state';
 
 function formatCurrency(value: number): string {
-  return `€${value.toFixed(2)}`;
+  return `${value.toFixed(2).replace('.', ',')} €`;
 }
 
 function loadQuantities(): Map<string, number> {
@@ -33,7 +36,11 @@ function init(): void {
   const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-product-id]'));
   const itemsContainer = document.getElementById('presupuesto-items');
   const totalEl = document.getElementById('presupuesto-total');
+  const savingsEl = document.getElementById('presupuesto-savings');
+  const savingsRow = document.getElementById('presupuesto-savings-row');
   if (!itemsContainer || !totalEl) return;
+  const itemsContainerEl = itemsContainer;
+  const totalElEl = totalEl;
 
   const state = new Map<string, ProductRow>();
 
@@ -49,21 +56,30 @@ function init(): void {
     }
   }
 
+  function getUnitPrice(row: ProductRow, qty: number): number {
+    if (qty >= 100 && row.priceX100 > 0) return row.priceX100;
+    if (qty >= 50 && row.priceX50 > 0) return row.priceX50;
+    if (qty >= 10 && row.priceX10 > 0) return row.priceX10;
+    return row.priceBase;
+  }
+
   function render(): void {
     const rows = Array.from(state.values()).filter((r) => r.qty > 0);
 
-    itemsContainer.innerHTML = '';
+    itemsContainerEl.innerHTML = '';
 
     if (rows.length === 0) {
       const p = document.createElement('p');
       p.textContent = 'Sin productos añadidos.';
       p.className = 'text-slate-500';
-      itemsContainer.appendChild(p);
-      totalEl.textContent = formatCurrency(0);
+      itemsContainerEl.appendChild(p);
+      totalElEl.textContent = formatCurrency(0);
+      if (savingsRow) savingsRow.hidden = true;
       return;
     }
 
     let total = 0;
+    let totalSavings = 0;
 
     for (const row of rows) {
       const line = document.createElement('div');
@@ -78,24 +94,39 @@ function init(): void {
 
       const meta = document.createElement('span');
       meta.className = 'text-sm text-slate-500';
-      meta.textContent = `${row.qty} × ${formatCurrency(row.price)}`;
+      const unitPrice = getUnitPrice(row, row.qty);
+      meta.textContent = `${row.qty} × `;
+      const basePrice = document.createElement('span');
+      basePrice.className = 'line-through text-slate-400 mr-2';
+      basePrice.textContent = formatCurrency(row.priceBase);
+      const appliedPrice = document.createElement('span');
+      appliedPrice.className = 'text-slate-500';
+      appliedPrice.textContent = formatCurrency(unitPrice);
+      meta.appendChild(basePrice);
+      meta.appendChild(appliedPrice);
 
       left.appendChild(name);
       left.appendChild(meta);
 
       const right = document.createElement('span');
       right.className = 'font-semibold text-slate-900';
-      const subtotal = row.qty * row.price;
+      const subtotal = row.qty * unitPrice;
       right.textContent = formatCurrency(subtotal);
 
       line.appendChild(left);
       line.appendChild(right);
-      itemsContainer.appendChild(line);
+      itemsContainerEl.appendChild(line);
 
       total += subtotal;
+      const baseSubtotal = row.qty * row.priceBase;
+      totalSavings += Math.max(0, baseSubtotal - subtotal);
     }
 
-    totalEl.textContent = formatCurrency(total);
+    totalElEl.textContent = formatCurrency(total);
+    if (savingsEl && savingsRow) {
+      savingsEl.textContent = `-${formatCurrency(totalSavings)}`;
+      savingsRow.hidden = totalSavings <= 0;
+    }
   }
 
   function updateRow(id: string, delta: number, persist = true): void {
@@ -127,7 +158,10 @@ function init(): void {
     const id = card.dataset.productId ?? '';
     if (!id) continue;
     const name = card.dataset.productName ?? 'Producto';
-    const price = Number(card.dataset.productPrice ?? 0) || 0;
+    const priceBase = Number(card.dataset.productPrice ?? 0) || 0;
+    const priceX10 = Number(card.dataset.productPriceX10 ?? 0) || 0;
+    const priceX50 = Number(card.dataset.productPriceX50 ?? 0) || 0;
+    const priceX100 = Number(card.dataset.productPriceX100 ?? 0) || 0;
     const countEl = card.querySelector<HTMLInputElement>('[data-role="count"]');
     const minusBtn = card.querySelector<HTMLButtonElement>('[data-action="decrement"]');
     const plusBtn = card.querySelector<HTMLButtonElement>('[data-action="increment"]');
@@ -136,7 +170,10 @@ function init(): void {
     const row: ProductRow = {
       id,
       name,
-      price,
+      priceBase,
+      priceX10,
+      priceX50,
+      priceX100,
       qty: 0,
       countEl,
       minusBtn,

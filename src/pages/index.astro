@@ -1,9 +1,18 @@
 ---
 import { getFilteredProducts } from '../services/notion';
+import type { Product } from '../services/notion';
 import { config } from '../config/filter';
 import faCss from '@fortawesome/fontawesome-free/css/all.min.css?url';
+import catalogPdfUrl from '../scripts/catalog-pdf.ts?url';
+import presupuestoUrl from '../scripts/presupuesto.ts?url';
 
-const products = await getFilteredProducts();
+type ProductWithPrices = Product & {
+  priceX10: number;
+  priceX50: number;
+  priceX100: number;
+};
+
+const products = (await getFilteredProducts()) as ProductWithPrices[];
 ---
 
 <!DOCTYPE html>
@@ -69,25 +78,32 @@ const products = await getFilteredProducts();
     {products.length > 0 ? (
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {products.map((product) => {
-          const rawPrice = typeof product.price === 'number' ? product.price : Number(product.price) || 0;
-          const displayPrice = `€${rawPrice}`;
+          const productWithPrices = product as ProductWithPrices;
+          const rawPrice = typeof productWithPrices.price === 'number' ? productWithPrices.price : Number(productWithPrices.price) || 0;
+          const priceX10 = typeof productWithPrices.priceX10 === 'number' ? productWithPrices.priceX10 : Number(productWithPrices.priceX10) || 0;
+          const priceX50 = typeof productWithPrices.priceX50 === 'number' ? productWithPrices.priceX50 : Number(productWithPrices.priceX50) || 0;
+          const priceX100 = typeof productWithPrices.priceX100 === 'number' ? productWithPrices.priceX100 : Number(productWithPrices.priceX100) || 0;
+          const displayPrice = `${rawPrice} €`;
           return (
             <div
               class="group relative bg-white border-2 border-indigo-600 rounded-3xl p-8 flex flex-col transition-transform duration-300 hover:-translate-y-2"
-              data-product-id={product.id}
-              data-product-name={product.name || 'Producto'}
+              data-product-id={productWithPrices.id}
+              data-product-name={productWithPrices.name || 'Producto'}
               data-product-price={rawPrice}
+              data-product-price-x10={priceX10}
+              data-product-price-x50={priceX50}
+              data-product-price-x100={priceX100}
             >
               <div class="flex justify-between items-start mb-8 gap-3">
                 <span class="px-4 py-1.5 rounded-full border border-slate-200 text-sm font-medium text-slate-600">
-                  {product.category || 'Original'}
+                  {productWithPrices.category || 'Original'}
                 </span>
-                <div class="flex items-center gap-2 text-slate-700" aria-label="Control cantidad">
+                <div class="flex items-center text-slate-700" aria-label="Control cantidad">
                   <button
-                    class="w-8 h-8 rounded-full border border-indigo-200 text-indigo-700 bg-indigo-50 flex items-center justify-center hover:bg-indigo-600 hover:border-indigo-600 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    class="w-7 h-7 rounded-l-full border border-indigo-200 text-indigo-700 bg-indigo-50 text-xs font-semibold flex items-center justify-center hover:bg-indigo-600 hover:border-indigo-600 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
                     type="button"
                     data-action="decrement"
-                    aria-label={`Quitar ${product.name || 'producto'}`}
+                    aria-label={`Quitar ${productWithPrices.name || 'producto'}`}
                   >
                     −
                   </button>
@@ -96,26 +112,26 @@ const products = await getFilteredProducts();
                     min="0"
                     value="0"
                     inputmode="numeric"
-                    class="qty-input w-20 rounded-md border border-slate-200 px-3 py-1.5 text-center font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    class="qty-input w-14 h-7 border-y border-slate-200 text-center text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     data-role="count"
-                    aria-label={`Cantidad de ${product.name || 'producto'}`}
+                    aria-label={`Cantidad de ${productWithPrices.name || 'producto'}`}
                   />
                   <button
-                    class="w-8 h-8 rounded-full border border-indigo-200 text-indigo-700 bg-indigo-50 flex items-center justify-center hover:bg-indigo-600 hover:border-indigo-600 hover:text-white transition"
+                    class="w-7 h-7 rounded-r-full border border-indigo-200 text-indigo-700 bg-indigo-50 text-xs font-semibold flex items-center justify-center hover:bg-indigo-600 hover:border-indigo-600 hover:text-white transition"
                     type="button"
                     data-action="increment"
-                    aria-label={`Añadir ${product.name || 'producto'}`}
+                    aria-label={`Añadir ${productWithPrices.name || 'producto'}`}
                   >
                     +
                   </button>
                 </div>
               </div>
               <div class="aspect-square w-full rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mb-8 overflow-hidden">
-                {product.image ? (
+                {productWithPrices.image ? (
                   <img
-                    alt={product.name || 'Producto'}
+                    alt={productWithPrices.name || 'Producto'}
                     class="w-full h-full object-cover drop-shadow-2xl group-hover:scale-110 transition-transform duration-500"
-                    src={product.image}
+                    src={productWithPrices.image}
                   />
                 ) : (
                   <span class="material-symbols-outlined text-6xl text-slate-300">image</span>
@@ -123,10 +139,10 @@ const products = await getFilteredProducts();
               </div>
               <div class="mt-auto">
                 <div class="flex justify-between items-baseline mb-1">
-                  <h3 class="text-xl font-bold text-slate-900">{product.name || 'Producto'}</h3>
+                  <h3 class="text-xl font-bold text-slate-900">{productWithPrices.name || 'Producto'}</h3>
                   <span class="text-xl font-bold text-slate-900">{displayPrice}</span>
                 </div>
-                <p class="text-slate-500">{product.description || 'Personalizable y listo para tu marca.'}</p>
+                <p class="text-slate-500">{productWithPrices.description || 'Personalizable y listo para tu marca.'}</p>
               </div>
             </div>
           );
@@ -157,9 +173,13 @@ const products = await getFilteredProducts();
         <p class="text-slate-500" data-empty>Sin productos añadidos.</p>
       </div>
 
-      <div class="mt-6 pt-6 border-t border-slate-200 flex items-center justify-between">
+      <div id="presupuesto-savings-row" class="mt-6 pt-6 border-t border-slate-200 flex items-center justify-between text-md font-bold text-zinc-500">
+        <span>Ahorro</span>
+        <span id="presupuesto-savings" class="font-semibold text-slate-700">0.00 €</span>
+      </div>
+      <div class="mt-2 flex items-center justify-between">
         <span class="text-lg font-semibold text-slate-700">Total</span>
-        <span id="presupuesto-total" class="text-2xl font-bold text-indigo-700">€0.00</span>
+        <span id="presupuesto-total" class="text-2xl font-bold text-indigo-700">0.00 €</span>
       </div>
     </section>
 
@@ -188,8 +208,8 @@ const products = await getFilteredProducts();
     </footer>
   </div>
 
-  <script type="module" src="/src/scripts/catalog-pdf.ts"></script>
-  <script type="module" src="/src/scripts/presupuesto.ts"></script>
+  <script type="module" src={catalogPdfUrl}></script>
+  <script type="module" src={presupuestoUrl}></script>
 
 </body>
 
