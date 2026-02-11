@@ -90,7 +90,7 @@ function init(): void {
       p.className = 'text-slate-500';
       itemsContainerEl.appendChild(p);
       totalElEl.textContent = formatCurrency(0);
-      if (savingsRow) savingsRow.hidden = true;
+      if (savingsRow) savingsRow.classList.add('hidden');
       return;
     }
 
@@ -112,14 +112,24 @@ function init(): void {
       meta.className = 'text-sm text-slate-500';
       const unitPrice = getUnitPrice(row, row.qty);
       meta.textContent = `${row.qty} × `;
-      const basePrice = document.createElement('span');
-      basePrice.className = 'line-through text-slate-400 mr-2';
-      basePrice.textContent = formatCurrency(row.priceBase);
-      const appliedPrice = document.createElement('span');
-      appliedPrice.className = 'text-slate-500';
-      appliedPrice.textContent = formatCurrency(unitPrice);
-      meta.appendChild(basePrice);
-      meta.appendChild(appliedPrice);
+      
+      if (unitPrice === row.priceBase) {
+        // Sin descuento: mostrar solo el precio
+        const price = document.createElement('span');
+        price.className = 'text-slate-500';
+        price.textContent = formatCurrency(unitPrice);
+        meta.appendChild(price);
+      } else {
+        // Con descuento: mostrar precio tachado y nuevo precio
+        const basePrice = document.createElement('span');
+        basePrice.className = 'line-through text-slate-400 mr-2';
+        basePrice.textContent = formatCurrency(row.priceBase);
+        const appliedPrice = document.createElement('span');
+        appliedPrice.className = 'text-slate-500';
+        appliedPrice.textContent = formatCurrency(unitPrice);
+        meta.appendChild(basePrice);
+        meta.appendChild(appliedPrice);
+      }
 
       left.appendChild(name);
       left.appendChild(meta);
@@ -141,7 +151,11 @@ function init(): void {
     totalElEl.textContent = formatCurrency(total);
     if (savingsEl && savingsRow) {
       savingsEl.textContent = `-${formatCurrency(totalSavings)}`;
-      savingsRow.hidden = totalSavings <= 0;
+      if (totalSavings > 0) {
+        savingsRow.classList.remove('hidden');
+      } else {
+        savingsRow.classList.add('hidden');
+      }
     }
   }
 
