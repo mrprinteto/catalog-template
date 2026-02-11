@@ -2,6 +2,7 @@ import { config } from '../config/filter';
 
 const NOTION_API = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export interface Product {
   id: string;
@@ -15,6 +16,14 @@ export interface Product {
   image: string;
 }
 
+interface CacheEntry {
+  data: Product[];
+  timestamp: number;
+}
+
+// In-memory LRU cache (simple implementation)
+const cache = new Map<string, CacheEntry>();
+
 /** Convierte un ID de 32 hex a formato UUID con guiones. */
 function toUUID(id: string): string {
   const raw = id.replace(/-/g, '');
@@ -22,6 +31,50 @@ function toUUID(id: string): string {
     throw new Error(`Database ID invalido: "${id}"`);
   }
   return `${raw.slice(0, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}-${raw.slice(16, 20)}-${raw.slice(20)}`;
+}
+
+/** Retry logic con exponential backoff */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries = 3
+): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        return response;
+      }
+      
+      // Retry on 429 (rate limit) or 5xx
+      if (response.status === 429 || response.status >= 500) {
+        const backoff = Math.pow(2, attempt) * 1000; // exponential backoff
+        await new Promise(resolve => setTimeout(resolve, backoff));
+        continue;
+      }
+      
+      return response;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < maxRetries - 1) {
+        const backoff = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, backoff));
+      }
+    }
+  }
+  
+  throw lastError || new Error('Max retries exceeded');
 }
 
 export async function getFilteredProducts(): Promise<Product[]> {
@@ -34,20 +87,31 @@ export async function getFilteredProducts(): Promise<Product[]> {
     );
   }
 
-  const res = await fetch(`${NOTION_API}/databases/${toUUID(dbId)}/query`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Notion-Version': NOTION_VERSION,
-      'Content-Type': 'application/json',
-    },
+  const cacheKey = `products-${config.clientFilter}`;
+  
+  // Check cache
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  const res = await fetchWithRetry(
+    `${NOTION_API}/databases/${toUUID(dbId)}/query`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Notion-Version': NOTION_VERSION,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         filter: {
           property: 'Client',
           multi_select: { contains: config.clientFilter },
         },
       }),
-  });
+    }
+  );
 
   if (!res.ok) {
     const body = await res.text();
@@ -56,7 +120,7 @@ export async function getFilteredProducts(): Promise<Product[]> {
 
   const data = (await res.json()) as any;
 
-  return data.results.map((page: any): Product => {
+  const products = data.results.map((page: any): Product => {
     const p = page.properties;
     return {
       id: page.id,
@@ -70,4 +134,12 @@ export async function getFilteredProducts(): Promise<Product[]> {
       image: p.Image?.url ?? '',
     };
   });
+
+  // Store in cache
+  cache.set(cacheKey, {
+    data: products,
+    timestamp: Date.now(),
+  });
+
+  return products;
 }

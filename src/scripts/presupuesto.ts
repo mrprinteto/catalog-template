@@ -10,7 +10,10 @@ type ProductRow = {
   minusBtn: HTMLButtonElement;
 };
 
+// Schema versioning for localStorage (client-localstorage-schema pattern)
+const STORAGE_VERSION = 1;
 const STORAGE_KEY = 'presupuesto-state';
+const STORAGE_VERSION_KEY = 'presupuesto-version';
 
 function formatCurrency(value: number): string {
   return `${value.toFixed(2).replace('.', ',')} €`;
@@ -18,6 +21,17 @@ function formatCurrency(value: number): string {
 
 function loadQuantities(): Map<string, number> {
   try {
+    // Check schema version and clear if outdated
+    const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+    const version = Number(storedVersion) || 0;
+    
+    if (version !== STORAGE_VERSION) {
+      console.info(`Clearing old presupuesto schema (v${version} → v${STORAGE_VERSION})`);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
+      return new Map();
+    }
+    
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return new Map();
     const parsed = JSON.parse(raw) as Record<string, number>;
@@ -28,6 +42,7 @@ function loadQuantities(): Map<string, number> {
     );
   } catch (err) {
     console.warn('No se pudo leer el presupuesto almacenado', err);
+    localStorage.removeItem(STORAGE_KEY);
     return new Map();
   }
 }
@@ -50,6 +65,7 @@ function init(): void {
       if (row.qty > 0) snapshot[row.id] = row.qty;
     }
     try {
+      localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
     } catch (err) {
       console.warn('No se pudo guardar el presupuesto', err);

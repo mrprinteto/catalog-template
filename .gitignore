@@ -19,3 +19,6 @@ dist
 # Hosting
 .vercel
 .netlify
+
+# Github
+.github

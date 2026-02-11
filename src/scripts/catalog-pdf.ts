@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-
 function init(): void {
   const btn = document.getElementById('catalog-pdf-btn');
   if (!btn) return;
@@ -21,6 +18,10 @@ function init(): void {
     body.style.overflow = 'hidden';
 
     try {
+      // Dynamic imports: load only when user clicks (bundle-dynamic-imports pattern)
+      const { default: html2canvas } = await import('html2canvas');
+      const { jsPDF } = await import('jspdf');
+
       const canvas = await html2canvas(target, {
         scale: 2,
         useCORS: true,
