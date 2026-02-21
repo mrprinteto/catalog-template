@@ -3,7 +3,7 @@
  * Modifica companySlug para cambiar que empresa se muestra.
  */
 const DEFAULT_COMPANY = 'crosssaiyan';
-const envCompanySlug = import.meta.env.NOTION_COMPANY_SLUG;
+const envCompanySlug = ((import.meta as any).env ?? {}).NOTION_COMPANY_SLUG;
 
 export const config = {
   companySlug: envCompanySlug?.trim().toLowerCase() || DEFAULT_COMPANY,

@@ -20,6 +20,8 @@ const companyName = company?.name || config.companySlug;
 const companySlug = company?.slug || config.companySlug;
 const companyUrl = company?.url || 'https://mrprinteto.com';
 const companyLogo = company?.logo;
+const whatsappMessage = `Hola MrPrinteto, te contacto porque necesito ayuda con mi catalogo de ${companyName}`;
+const whatsappUrl = `https://wa.me/34636358266?text=${encodeURIComponent(whatsappMessage)}`;
 ---
 
 <!DOCTYPE html>
@@ -41,7 +43,7 @@ const companyLogo = company?.logo;
   <div class="max-w-7xl mx-auto px-6 py-12 md:py-20">
     <header class="flex flex-col md:flex-row md:items-center justify-between mb-16 gap-4">
       <div class="max-w-xl">
-        <h1 class="text-3xl md:text-5xl font-bold text-indigo-600 mb-8 tracking-tightnormal">
+        <h1 class="text-3xl md:text-6xl font-black text-black mb-8 tracking-tight">
           <span class="opacity-50 font-thin">Catálogo</span>&nbsp;{companyName}
         </h1>
         <p class="text-slate-600 leading-relaxed text-lg">
@@ -62,13 +64,21 @@ const companyLogo = company?.logo;
       </div>
     </header>
 
-    <div class="mb-10 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900 shadow-sm">
-      <p class="text-sm md:text-base font-medium">
-        💡 <strong>Descuento por lote:</strong> al pedir <strong>10</strong> o <strong>100</strong> unidades,
-        aplicamos un precio especial por volumen.
-      </p>
+    <div class="mb-10 rounded-2xl px-5 py-4 text-slate-900 shadow-sm flex">
+      <div class="flex-shrink-0 mr-4">
+        <i class="fa fa-piggy-bank text-6xl mr-2 fa-bounce text-indigo-400 mt-2"></i>
+      </div>
+      <div>
+        <p class="text-slate-800 mb-2 font-semibold text-lg">
+          Descuento por volumen
+        </p>  
+        <p class="text-slate-600 mb-2 text-md">
+          Por pedidos superiores a 10 o 100 unidades, aplicamos descuentos especiales. <br> Añade productos al presupuesto para ver los descuentos aplicados automáticamente.
+        </p>
+      </div>
     </div>
 
+    
     {products.length > 0 ? (
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {products.map((product) => {
@@ -152,7 +162,7 @@ const companyLogo = company?.logo;
       </div>
     )}
 
-    <section id="presupuesto" class="mt-16 bg-white border-2 border-indigo-600 rounded-3xl p-8 shadow-sm">
+    <section id="presupuesto" class="mt-16 bg-white border-2 border-indigo-600 rounded-3xl p-8 shadow-sm" data-company-name={companyName} data-company-slug={companySlug}>
       <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 pb-6 border-b border-slate-200 gap-4">
         <div>
           <p class="text-sm uppercase tracking-wide text-indigo-600 font-semibold">Resumen</p>
@@ -179,20 +189,74 @@ const companyLogo = company?.logo;
     </section>
 
     <div class="mt-8 flex justify-end">
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noreferrer"
+        class="ml-4 px-6 py-3 rounded-full border-2 border-emerald-600 text-emerald-700 font-medium hover:bg-emerald-600 hover:text-white transition-all duration-300 flex items-center gap-2"
+      >
+        <i class="fa-brands fa-whatsapp mr-2 text-2xl"></i>
+        Contactar
+      </a>
       <button
         id="catalog-pdf-btn"
         data-client={companySlug}
-        class="px-8 py-3 rounded-full border-2 border-indigo-600 text-indigo-600 font-medium hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all duration-300 flex items-center gap-2">
-        <i class="fa-solid fa-download"></i>
-        Descarga
+        class="ml-4 px-6 py-3 rounded-full border-2 border-blue-600 text-blue-600 font-medium hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300 flex items-center gap-2">
+        <i class="fa-solid fa-download mr-2 text-xl"></i>
+        Descargar PDF
       </button>
+      <button
+        id="catalog-submit-btn"
+        data-company-name={companyName}
+        data-company-slug={companySlug}
+        class="ml-4 px-6 py-3 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors duration-300">
+        <i class="fa-solid fa-paper-plane mr-2"></i>
+        Solicitar pedido</button>
+    </div>
+
+    <div id="catalog-submit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 px-4" role="dialog" aria-modal="true" aria-labelledby="catalog-submit-title">
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div class="mb-4">
+          <h3 id="catalog-submit-title" class="text-xl font-bold text-slate-900">Solicitar pedido</h3>
+          <p class="mt-1 text-sm text-slate-600">Introduce tu clave para confirmar el envío del presupuesto.</p>
+        </div>
+
+        <input
+          id="catalog-submit-key"
+          type="text"
+          autocomplete="off"
+          class="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+          placeholder="Escribe tu clave"
+        />
+        <p id="catalog-submit-modal-error" class="mt-2 hidden text-sm text-rose-600"></p>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button id="catalog-submit-cancel" type="button" class="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Cancelar</button>
+          <button id="catalog-submit-confirm" type="button" class="rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700">Confirmar pedido</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="catalog-notification-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 px-4" role="dialog" aria-modal="true" aria-labelledby="catalog-notification-title">
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div class="mb-3 flex items-center gap-3">
+          <span id="catalog-notification-icon" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <i class="fa-solid fa-check"></i>
+          </span>
+          <h3 id="catalog-notification-title" class="text-xl font-bold text-slate-900">Pedido realizado</h3>
+        </div>
+        <p id="catalog-notification-message" class="text-sm text-slate-700"></p>
+        <div class="mt-6 flex justify-end">
+          <button id="catalog-notification-close" type="button" class="rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700">Cerrar</button>
+        </div>
+      </div>
     </div>
 
     <footer class="mt-24 pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
       <p class="text-slate-500 text-sm">© 2026 MrPrinteto. All rights reserved.</p>
       <div class="flex gap-4 text-slate-500 text-xl">
         <a class="hover:text-slate-700 transition" href={companyUrl} aria-label={`Web ${companyName}`} target="_blank" rel="noreferrer">
-          <i class="fa-solid fa-globe"></i>
+          <i class="fa-solid fa-earth-europe"></i>
         </a>
         <a class="hover:text-slate-700 transition" href="https://instagram.com/mrprinteto" aria-label="Instagram @mrprinteto" target="_blank" rel="noreferrer">
           <i class="fa-brands fa-instagram"></i>
@@ -201,7 +265,7 @@ const companyLogo = company?.logo;
           <i class="fa-brands fa-tiktok"></i>
         </a>
         <a class="hover:text-slate-700 transition" href="https://youtube.com/@mrprinteto" aria-label="YouTube @mrprinteto" target="_blank" rel="noreferrer">
-          <i class="fa-solid fa-youtube"></i>
+          <i class="fa-brands fa-youtube"></i>
         </a>
         <a class="hover:text-slate-700 transition" href="https://www.threads.net/@mrprinteto" aria-label="Threads @mrprinteto" target="_blank" rel="noreferrer">
           <i class="fa-brands fa-threads"></i>

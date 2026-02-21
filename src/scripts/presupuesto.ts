@@ -10,6 +10,24 @@ type ProductRow = {
   minusBtn: HTMLButtonElement;
 };
 
+type PresupuestoItem = {
+  id: string;
+  name: string;
+  qty: number;
+  unitPrice: number;
+  baseUnitPrice: number;
+  subtotal: number;
+};
+
+type PresupuestoPayload = {
+  companyName: string;
+  companySlug: string;
+  items: PresupuestoItem[];
+  subtotal: number;
+  discount: number;
+  total: number;
+};
+
 // Schema versioning for localStorage (client-localstorage-schema pattern)
 const STORAGE_VERSION = 1;
 const STORAGE_KEY = 'presupuesto-state';
@@ -79,8 +97,66 @@ function init(): void {
     return row.priceBase;
   }
 
+  function getSelectedRows(): ProductRow[] {
+    return Array.from(state.values()).filter((r) => r.qty > 0);
+  }
+
+  function getCompanyInfo(): { companyName: string; companySlug: string } {
+    const presupuestoSection = document.getElementById('presupuesto');
+    const submitButton = document.getElementById('catalog-submit-btn');
+
+    const companyName =
+      presupuestoSection?.getAttribute('data-company-name') ||
+      submitButton?.getAttribute('data-company-name') ||
+      'Cliente';
+    const companySlug =
+      presupuestoSection?.getAttribute('data-company-slug') ||
+      submitButton?.getAttribute('data-company-slug') ||
+      '';
+
+    return { companyName, companySlug };
+  }
+
+  function buildPresupuestoPayload(): PresupuestoPayload | null {
+    const rows = getSelectedRows();
+    if (rows.length === 0) return null;
+
+    let total = 0;
+    let subtotal = 0;
+
+    const items: PresupuestoItem[] = rows.map((row) => {
+      const unitPrice = getUnitPrice(row, row.qty);
+      const lineSubtotal = row.qty * unitPrice;
+      const lineBaseSubtotal = row.qty * row.priceBase;
+
+      total += lineSubtotal;
+      subtotal += lineBaseSubtotal;
+
+      return {
+        id: row.id,
+        name: row.name,
+        qty: row.qty,
+        unitPrice,
+        baseUnitPrice: row.priceBase,
+        subtotal: lineSubtotal,
+      };
+    });
+
+    const discount = Math.max(0, subtotal - total);
+    const { companyName, companySlug } = getCompanyInfo();
+
+    return {
+      companyName,
+      companySlug,
+      items,
+      subtotal,
+      discount,
+      total,
+    };
+  }
+
   function render(): void {
-    const rows = Array.from(state.values()).filter((r) => r.qty > 0);
+    const rows = getSelectedRows();
 
     itemsContainerEl.innerHTML = '';
 
@@ -230,6 +306,176 @@ function init(): void {
 
   render();
   saveState();
+
+  (window as any).getPresupuestoPayload = buildPresupuestoPayload;
+
+  const submitBtn = document.getElementById('catalog-submit-btn');
+  const modalEl = document.getElementById('catalog-submit-modal');
+  const keyInput = document.getElementById('catalog-submit-key') as HTMLInputElement | null;
+  const modalErrorEl = document.getElementById('catalog-submit-modal-error');
+  const cancelBtn = document.getElementById('catalog-submit-cancel') as HTMLButtonElement | null;
+  const confirmBtn = document.getElementById('catalog-submit-confirm') as HTMLButtonElement | null;
+  const notificationModalEl = document.getElementById('catalog-notification-modal');
+  const notificationTitleEl = document.getElementById('catalog-notification-title');
+  const notificationMessageEl = document.getElementById('catalog-notification-message');
+  const notificationIconEl = document.getElementById('catalog-notification-icon');
+  const notificationCloseBtn = document.getElementById('catalog-notification-close') as HTMLButtonElement | null;
+
+  if (!submitBtn || !modalEl || !keyInput || !modalErrorEl || !cancelBtn || !confirmBtn || !notificationModalEl || !notificationTitleEl || !notificationMessageEl || !notificationIconEl || !notificationCloseBtn) {
+    return;
+  }
+
+  const modalElNode = modalEl;
+  const keyInputNode = keyInput;
+  const modalErrorElNode = modalErrorEl;
+  const confirmBtnNode = confirmBtn;
+  const notificationModalNode = notificationModalEl;
+  const notificationTitleNode = notificationTitleEl;
+  const notificationMessageNode = notificationMessageEl;
+  const notificationIconNode = notificationIconEl;
+  const notificationCloseBtnNode = notificationCloseBtn;
+
+  const fallbackMessage =
+    'Para este pedido necesitamos que nos escribas un email a <a class="font-bold text-indigo-500" href="mailto:info@mrprinteto.com">info@mrprinteto.com</a> con los detalles de lo que quieres solicitar.';
+
+  function closeNotificationModal(): void {
+    notificationModalNode.classList.add('hidden');
+    notificationModalNode.classList.remove('flex');
+  }
+
+  function openNotificationModal(title: string, message: string, kind: 'success' | 'error'): void {
+    notificationTitleNode.textContent = title;
+    notificationMessageNode.innerHTML = message;
+
+    notificationIconNode.classList.remove('bg-emerald-100', 'text-emerald-700', 'bg-rose-100', 'text-rose-700', 'bg-yellow-100', 'text-yellow-700');
+    notificationIconNode.innerHTML = '';
+
+    const icon = document.createElement('i');
+    icon.className = kind === 'success' ? 'fa-solid fa-check' : 'fa-solid fa-triangle-exclamation';
+
+    // Successo: verde; Warning: naranja; Error: rojo
+    if (kind === 'success') {
+      notificationIconNode.classList.add('bg-emerald-100', 'text-emerald-700');
+    } else if (kind === 'error') {
+      notificationIconNode.classList.add('bg-rose-100', 'text-rose-700');
+    } else {
+      notificationIconNode.classList.add('bg-orange-100', 'text-orange-500');
+    }
+
+    notificationIconNode.appendChild(icon);
+    notificationModalNode.classList.remove('hidden');
+    notificationModalNode.classList.add('flex');
+  }
+
+  function setModalError(message: string): void {
+    if (!message) {
+      modalErrorElNode.textContent = '';
+      modalErrorElNode.classList.add('hidden');
+      return;
+    }
+    modalErrorElNode.textContent = message;
+    modalErrorElNode.classList.remove('hidden');
+  }
+
+  function openModal(): void {
+    setModalError('');
+    keyInputNode.value = '';
+    modalElNode.classList.remove('hidden');
+    modalElNode.classList.add('flex');
+    window.setTimeout(() => keyInputNode.focus(), 0);
+  }
+
+  function closeModal(): void {
+    modalElNode.classList.add('hidden');
+    modalElNode.classList.remove('flex');
+    setModalError('');
+  }
+
+  async function submitPedido(): Promise<void> {
+    const payload = buildPresupuestoPayload();
+    if (!payload) {
+      setModalError('Añade al menos un producto para solicitar el pedido.');
+      return;
+    }
+
+    const key = keyInputNode.value.trim();
+    if (!key) {
+      setModalError('Debes introducir una clave.');
+      return;
+    }
+
+    confirmBtnNode.disabled = true;
+    confirmBtnNode.textContent = 'Validando...';
+
+    try {
+      const response = await fetch('/api/pedido', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          key,
+          presupuesto: payload,
+        }),
+      });
+
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      if (response.status === 401 || data?.code === 'INVALID_KEY') {
+        setModalError('La clave no es correcta.');
+        return;
+      }
+
+      closeModal();
+      if (response.ok && data?.success) {
+        openNotificationModal('Nos ponemos con ello!', 'Tu pedido se ha realizado correctamente. Nos pondremos en contacto contigo pronto.', 'success');
+      } else {
+        openNotificationModal('Necesitamos más datos', fallbackMessage, 'warning');
+      }
+    } catch {
+      closeModal();
+      openNotificationModal('Necesitamos más datos', fallbackMessage, 'error');
+    } finally {
+      confirmBtnNode.disabled = false;
+      confirmBtnNode.textContent = 'Confirmar pedido';
+    }
+  }
+
+  submitBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+
+  modalElNode.addEventListener('click', (event) => {
+    if (event.target === modalElNode) {
+      closeModal();
+    }
+  });
+
+  keyInputNode.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void submitPedido();
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeModal();
+    }
+  });
+
+  confirmBtnNode.addEventListener('click', () => {
+    void submitPedido();
+  });
+
+  notificationCloseBtnNode.addEventListener('click', closeNotificationModal);
+  notificationModalNode.addEventListener('click', (event) => {
+    if (event.target === notificationModalNode) {
+      closeNotificationModal();
+    }
+  });
 }
 
 if (document.readyState === 'loading') {

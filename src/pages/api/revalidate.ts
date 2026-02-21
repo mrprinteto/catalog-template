@@ -13,9 +13,10 @@ export const prerender = false;
 export async function POST({ request }: any) {
   const searchParams = new URL(request.url).searchParams;
   const secret = searchParams.get('secret');
+  const env = (import.meta as any).env ?? {};
   
   // Verify secret
-  if (secret !== import.meta.env.REVALIDATE_SECRET) {
+  if (secret !== env.REVALIDATE_SECRET) {
     return new Response(JSON.stringify({ message: 'Invalid secret' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },

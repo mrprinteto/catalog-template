@@ -25,6 +25,11 @@ export interface Company {
   logo: string;
 }
 
+interface CompanyRecord {
+  company: Company;
+  key: string;
+}
+
 export interface CatalogData {
   company: Company | null;
   products: Product[];
@@ -35,8 +40,27 @@ interface CacheEntry {
   timestamp: number;
 }
 
+interface CompanyKeyCacheEntry {
+  key: string;
+  timestamp: number;
+}
+
 // In-memory LRU cache (simple implementation)
 const cache = new Map<string, CacheEntry>();
+const companyKeyCache = new Map<string, CompanyKeyCacheEntry>();
+
+function safeCompareSecret(left: string, right: string): boolean {
+  const maxLength = Math.max(left.length, right.length);
+  let mismatch = left.length === right.length ? 0 : 1;
+
+  for (let i = 0; i < maxLength; i++) {
+    const leftCode = left.charCodeAt(i) || 0;
+    const rightCode = right.charCodeAt(i) || 0;
+    mismatch |= leftCode ^ rightCode;
+  }
+
+  return mismatch === 0;
+}
 
 /** Convierte un ID de 32 hex a formato UUID con guiones. */
 function toUUID(id: string): string {
@@ -284,11 +308,23 @@ function parseCompany(page: any): Company {
   };
 }
 
-async function findCompanyBySlug(
+function parseCompanyKey(page: any): string {
+  const p = page.properties ?? {};
+
+  return (
+    getTextPropertyValue(p.Clave) ||
+    getTextPropertyValue(p.clave) ||
+    getTextPropertyValue(p.Key) ||
+    getTextPropertyValue(p.Password) ||
+    ''
+  ).trim();
+}
+
+async function findCompanyPageBySlug(
   token: string,
   companiesDbId: string,
   companySlug: string
-): Promise<Company> {
+): Promise<any> {
   const slugPropertyCandidates = ['Slug', 'slug', 'Client Slug', 'client-slug'];
 
   for (const propertyName of slugPropertyCandidates) {
@@ -301,7 +337,7 @@ async function findCompanyBySlug(
       });
 
       if (Array.isArray(data.results) && data.results.length > 0) {
-        return parseCompany(data.results[0]);
+        return data.results[0];
       }
     } catch {
       // Continue trying next property candidate.
@@ -325,13 +361,35 @@ async function findCompanyBySlug(
     );
   }
 
-  return parseCompany(match);
+  return match;
+}
+
+async function findCompanyBySlug(
+  token: string,
+  companiesDbId: string,
+  companySlug: string
+): Promise<Company> {
+  const page = await findCompanyPageBySlug(token, companiesDbId, companySlug);
+  return parseCompany(page);
+}
+
+async function getCompanyRecordBySlug(
+  token: string,
+  companiesDbId: string,
+  companySlug: string
+): Promise<CompanyRecord> {
+  const page = await findCompanyPageBySlug(token, companiesDbId, companySlug);
+  return {
+    company: parseCompany(page),
+    key: parseCompanyKey(page),
+  };
 }
 
 export async function getCatalogData(): Promise<CatalogData> {
-  const token = import.meta.env.NOTION_TOKEN;
-  const dbId = import.meta.env.NOTION_DATABASE_ID;
-  const companiesDbId = import.meta.env.NOTION_COMPANIES_DATABASE_ID;
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const dbId = env.NOTION_DATABASE_ID;
+  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
 
   if (!token || !dbId || !companiesDbId) {
     throw new Error(
@@ -444,4 +502,36 @@ export async function getCatalogData(): Promise<CatalogData> {
 export async function getFilteredProducts(): Promise<Product[]> {
   const { products } = await getCatalogData();
   return products;
+}
+
+export async function validateCompanyKeyForCurrentCatalog(inputKey: string): Promise<boolean> {
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
+  const normalizedInputKey = inputKey.trim();
+
+  if (!normalizedInputKey) {
+    return false;
+  }
+
+  if (!token || !companiesDbId) {
+    throw new Error('Faltan NOTION_TOKEN o NOTION_COMPANIES_DATABASE_ID en .env');
+  }
+
+  const cacheKey = `company-key-${config.companySlug}`;
+  const cachedEntry = companyKeyCache.get(cacheKey);
+  if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL_MS) {
+    if (!cachedEntry.key) return false;
+    return safeCompareSecret(cachedEntry.key, normalizedInputKey);
+  }
+
+  const { key } = await getCompanyRecordBySlug(token, companiesDbId, config.companySlug);
+  companyKeyCache.set(cacheKey, {
+    key,
+    timestamp: Date.now(),
+  });
+
+  if (!key) return false;
+
+  return safeCompareSecret(key, normalizedInputKey);
 }
