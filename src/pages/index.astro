@@ -1,8 +1,9 @@
 ---
-import { getFilteredProducts } from '../services/notion';
+import { getCatalogData } from '../services/notion';
 import type { Product } from '../services/notion';
 import { config } from '../config/filter';
 import '../styles/global.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
 
 // On-Demand ISR: page cached, revalidation triggered via /api/revalidate
 export const prerender = false;
@@ -13,7 +14,12 @@ type ProductWithPrices = Product & {
   priceX100: number;
 };
 
-const products = (await getFilteredProducts()) as ProductWithPrices[];
+const { company, products: catalogProducts } = await getCatalogData();
+const products = catalogProducts as ProductWithPrices[];
+const companyName = company?.name || config.companySlug;
+const companySlug = company?.slug || config.companySlug;
+const companyUrl = company?.url || 'https://mrprinteto.com';
+const companyLogo = company?.logo;
 ---
 
 <!DOCTYPE html>
@@ -22,44 +28,46 @@ const products = (await getFilteredProducts()) as ProductWithPrices[];
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>Catálogo - {config.clientFilter}</title>
+  <title>Catálogo - {companyName}</title>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
     rel="stylesheet" />
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.1.0/css/all.min.css"
-    integrity="sha512-4ZsDoUfiuWS803PywcM4YuQzictqVnlBIg1DywC5ME3lVAwCYTfGuTRVVVI+1Y/FaoMod7I5Z3QwxNCKr37A8w=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer" />
 </head>
 
 <body class="bg-gradient-to-br from-white via-indigo-50 to-indigo-100 text-slate-900">
   <div class="max-w-7xl mx-auto px-6 py-12 md:py-20">
-    <header class="flex flex-col md:flex-row md:items-start justify-between mb-16 gap-8">
+    <header class="flex flex-col md:flex-row md:items-center justify-between mb-16 gap-4">
       <div class="max-w-xl">
         <h1 class="text-3xl md:text-5xl font-bold text-indigo-600 mb-8 tracking-tightnormal">
-          <span class="opacity-50 font-thin">Catálogo</span>&nbsp;{config.clientFilter}
+          <span class="opacity-50 font-thin">Catálogo</span>&nbsp;{companyName}
         </h1>
         <p class="text-slate-600 leading-relaxed text-lg">
-          Hemos seleccionado este conjunto de productos con cuidado para tu marca <strong>{config.clientFilter}</strong>. Creemos que representan la
+          Hemos seleccionado este conjunto de productos con cuidado para tu marca <strong>{companyName}</strong>. Creemos que representan la
           esencia de tu marca e impactarán a tu audiencia. Todos los productos son personalizables, lo que te permite
           adaptarlos a tu estilo y necesidades específicas.
         </p>
       </div>
-      <div class="flex gap-4">
-        <button
-          id="catalog-pdf-btn"
-          data-client={config.clientFilter}
-          class="px-8 py-3 rounded-full border-2 border-indigo-600 text-indigo-600 font-medium hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all duration-300 flex items-center gap-2">
-          <i class="fa-solid fa-download"></i>
-          Descargar
-        </button>
+      <div class="flex-1 flex w-full items-center justify-center">
+        {companyLogo && (
+        <img
+          src={companyLogo}
+          alt={`Logo de ${companyName}`}
+          class="h-16 md:h-48 w-auto object-contain mx-auto"
+          loading="lazy"
+        />
+      )}
       </div>
     </header>
+
+    <div class="mb-10 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900 shadow-sm">
+      <p class="text-sm md:text-base font-medium">
+        💡 <strong>Descuento por lote:</strong> al pedir <strong>10</strong> o <strong>100</strong> unidades,
+        aplicamos un precio especial por volumen.
+      </p>
+    </div>
 
     {products.length > 0 ? (
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -139,7 +147,7 @@ const products = (await getFilteredProducts()) as ProductWithPrices[];
       <div class="text-center py-20">
         <span class="material-symbols-outlined text-6xl text-slate-300 mb-4">inventory_2</span>
         <p class="text-slate-500 text-lg">
-          Aún no hemos podido seleccionar productos para <strong>{config.clientFilter}</strong>.
+          Aún no hemos podido seleccionar productos para <strong>{companyName}</strong>.
         </p>
       </div>
     )}
@@ -152,7 +160,7 @@ const products = (await getFilteredProducts()) as ProductWithPrices[];
         </div>
         <div class="md:text-right">
           <p class="text-sm text-slate-500">Cliente</p>
-          <p class="text-lg font-semibold text-slate-900">{config.clientFilter}</p>
+          <p class="text-lg font-semibold text-slate-900">{companyName}</p>
         </div>
       </div>
 
@@ -170,10 +178,20 @@ const products = (await getFilteredProducts()) as ProductWithPrices[];
       </div>
     </section>
 
+    <div class="mt-8 flex justify-end">
+      <button
+        id="catalog-pdf-btn"
+        data-client={companySlug}
+        class="px-8 py-3 rounded-full border-2 border-indigo-600 text-indigo-600 font-medium hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all duration-300 flex items-center gap-2">
+        <i class="fa-solid fa-download"></i>
+        Descarga
+      </button>
+    </div>
+
     <footer class="mt-24 pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
       <p class="text-slate-500 text-sm">© 2026 MrPrinteto. All rights reserved.</p>
       <div class="flex gap-4 text-slate-500 text-xl">
-        <a class="hover:text-slate-700 transition" href="https://mrprinteto.com" aria-label="Web mrprinteto.com" target="_blank" rel="noreferrer">
+        <a class="hover:text-slate-700 transition" href={companyUrl} aria-label={`Web ${companyName}`} target="_blank" rel="noreferrer">
           <i class="fa-solid fa-globe"></i>
         </a>
         <a class="hover:text-slate-700 transition" href="https://instagram.com/mrprinteto" aria-label="Instagram @mrprinteto" target="_blank" rel="noreferrer">

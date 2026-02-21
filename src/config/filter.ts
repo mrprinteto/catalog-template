@@ -1,10 +1,10 @@
 /**
- * Configuracion del filtro de productos.
- * Modifica clientFilter para cambiar que productos se muestran.
+ * Configuracion del filtro de catalogo.
+ * Modifica companySlug para cambiar que empresa se muestra.
  */
-const DEFAULT_CLIENT = 'CrossSaiyan';
-const envClient = import.meta.env.NOTION_CLIENT;
+const DEFAULT_COMPANY = 'crosssaiyan';
+const envCompanySlug = import.meta.env.NOTION_COMPANY_SLUG;
 
 export const config = {
-  clientFilter: envClient?.trim() || DEFAULT_CLIENT,
+  companySlug: envCompanySlug?.trim().toLowerCase() || DEFAULT_COMPANY,
 };
