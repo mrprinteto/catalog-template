@@ -21,7 +21,49 @@ const companySlug = company?.slug || config.companySlug;
 const companyUrl = company?.url || 'https://mrprinteto.com';
 const companyLogo = company?.logo;
 const whatsappMessage = `Hola MrPrinteto, te contacto porque necesito ayuda con mi catalogo de ${companyName}`;
-const whatsappUrl = `https://wa.me/34636358266?text=${encodeURIComponent(whatsappMessage)}`;
+const whatsappUrl = `https://wa.me/34679553858?text=${encodeURIComponent(whatsappMessage)}`;
+
+const canonicalUrl = new URL('/', companyUrl).toString();
+const seoTitle = `Catálogo privado de ${companyName}`;
+const seoDescription = `Accede a la selección de productos que he preparado para ${companyName}. Personaliza cada artículo con tu marca y solicita tu presupuesto personalizado. ¡Haz que tu marca destaque con nuestros productos exclusivos!`;
+const seoKeywords = [
+  `catálogo ${companyName}`,
+  'merchandising personalizado',
+  'regalos promocionales',
+  'productos corporativos',
+  'presupuesto personalizado',
+  'impresión personalizada',
+].join(', ');
+
+const organizationStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: companyName,
+  url: canonicalUrl,
+  logo: companyLogo || undefined,
+};
+
+const itemListStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `Catálogo de ${companyName}`,
+  itemListElement: products.slice(0, 24).map((product, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'Product',
+      name: product.name || 'Producto',
+      description: product.description || 'Producto personalizable.',
+      image: product.image || undefined,
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'EUR',
+        price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
+        availability: 'https://schema.org/InStock',
+      },
+    },
+  })),
+};
 ---
 
 <!DOCTYPE html>
@@ -30,7 +72,35 @@ const whatsappUrl = `https://wa.me/34636358266?text=${encodeURIComponent(whatsap
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>Catálogo - {companyName}</title>
+  <title>{seoTitle}</title>
+  <meta name="description" content={seoDescription} />
+  <meta name="keywords" content={seoKeywords} />
+  <meta name="author" content={companyName} />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="format-detection" content="telephone=no" />
+
+  <link rel="canonical" href={canonicalUrl} />
+  <link rel="alternate" hreflang="es-ES" href={canonicalUrl} />
+  <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:site_name" content={companyName} />
+  <meta property="og:title" content={seoTitle} />
+  <meta property="og:description" content={seoDescription} />
+  <meta property="og:url" content={canonicalUrl} />
+  {companyLogo && <meta property="og:image" content={companyLogo} />}
+
+  <meta name="twitter:card" content={companyLogo ? 'summary_large_image' : 'summary'} />
+  <meta name="twitter:title" content={seoTitle} />
+  <meta name="twitter:description" content={seoDescription} />
+  {companyLogo && <meta name="twitter:image" content={companyLogo} />}
+
+  <script type="application/ld+json" set:html={JSON.stringify(organizationStructuredData)}></script>
+  <script type="application/ld+json" set:html={JSON.stringify(itemListStructuredData)}></script>
+
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
