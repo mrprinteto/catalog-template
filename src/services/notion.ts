@@ -7,7 +7,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 export interface Product {
   id: string;
   name: string;
-  category: string;
+  customized: boolean;
   price: number;
   priceX10: number;
   priceX50: number;
@@ -480,7 +480,7 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
     return {
       id: page.id,
       name: p.Name?.title?.[0]?.plain_text ?? '',
-      category: p.Category?.select?.name ?? '',
+      customized: p.Customized?.checkbox ?? p.customized?.checkbox ?? false,
       price: p.Price?.formula?.number ?? 0,
       priceX10: p.Price_x10?.formula?.number ?? 0,
       priceX50: p.Price_x50?.formula?.number ?? 0,

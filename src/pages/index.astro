@@ -182,9 +182,13 @@ const itemListStructuredData = {
                   data-product-price-x100={priceX100}
                 >
                   <div class="flex justify-between items-center mb-4 gap-3">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600">
-                      {productWithPrices.category || 'Original'}
-                    </span>
+                    <div>
+                      {productWithPrices.customized && (
+                        <span class="inline-flex items-center px-3 py-1 rounded-full border border-slate-200 bg-indigo-500 text-xs font-medium text-white">
+                          Personalizable
+                        </span>
+                      )}
+                    </div>
                     <div class="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50/70 p-0.5 text-slate-700" aria-label="Control cantidad">
                       <button
                         class="w-7 h-7 rounded-full text-indigo-700 text-sm font-semibold flex items-center justify-center hover:bg-indigo-600 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
