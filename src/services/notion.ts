@@ -284,10 +284,8 @@ function parseCompany(page: any): Company {
     'Empresa';
 
   const slug =
-    getTextPropertyValue(p.Slug) ||
     getTextPropertyValue(p.slug) ||
-    getTextPropertyValue(p['Client Slug']) ||
-    getTextPropertyValue(p['client-slug']) ||
+    getTextPropertyValue(p.Slug) ||
     slugify(name);
 
   const url =
@@ -329,7 +327,7 @@ async function findCompanyPageBySlug(
   companiesDbId: string,
   companySlug: string
 ): Promise<any> {
-  const slugPropertyCandidates = ['Slug', 'slug', 'Client Slug', 'client-slug'];
+  const slugPropertyCandidates = ['slug', 'Slug'];
 
   for (const propertyName of slugPropertyCandidates) {
     try {
@@ -400,6 +398,10 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
     throw new Error(
       'Faltan NOTION_TOKEN, NOTION_DATABASE_ID o NOTION_COMPANIES_DATABASE_ID en .env'
     );
+  }
+
+  if (!config.companySlug) {
+    throw new Error('Falta NOTION_COMPANY_SLUG en .env');
   }
 
   const cacheKey = `catalog-${config.companySlug}`;
