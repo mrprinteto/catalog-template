@@ -14,7 +14,10 @@ type ProductWithPrices = Product & {
   priceX100: number;
 };
 
-const { company, products: catalogProducts } = await getCatalogData();
+const forceRefresh = Astro.url.searchParams.has('refresh');
+const { company, products: catalogProducts } = await getCatalogData({
+  bypassCache: forceRefresh,
+});
 const products = catalogProducts as ProductWithPrices[];
 const companyName = company?.name || config.companySlug;
 const companySlug = company?.slug || config.companySlug;

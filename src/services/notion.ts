@@ -35,6 +35,10 @@ export interface CatalogData {
   products: Product[];
 }
 
+interface GetCatalogDataOptions {
+  bypassCache?: boolean;
+}
+
 interface CacheEntry {
   data: CatalogData;
   timestamp: number;
@@ -385,7 +389,8 @@ async function getCompanyRecordBySlug(
   };
 }
 
-export async function getCatalogData(): Promise<CatalogData> {
+export async function getCatalogData(options: GetCatalogDataOptions = {}): Promise<CatalogData> {
+  const { bypassCache = false } = options;
   const env = (import.meta as any).env ?? {};
   const token = env.NOTION_TOKEN;
   const dbId = env.NOTION_DATABASE_ID;
@@ -402,6 +407,7 @@ export async function getCatalogData(): Promise<CatalogData> {
   // Check cache
   const cached = cache.get(cacheKey);
   if (
+    !bypassCache &&
     cached &&
     Date.now() - cached.timestamp < CACHE_TTL_MS &&
     cached.data.products.length > 0
