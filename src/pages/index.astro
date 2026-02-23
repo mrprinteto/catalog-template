@@ -140,11 +140,11 @@ const itemListStructuredData = {
     <header class="flex flex-col md:flex-row md:items-center justify-between mb-16 gap-4">
       <div class="order-2 md:order-1 max-w-xl min-w-0">
         <h1 class="text-3xl md:text-6xl font-black text-indigo-500 mb-8 tracking-tight mt-10 md:mt-0 break-words">
-          <span class="opacity-50 font-thin">Catálogo</span>&nbsp;{companyName}
+          <span class="opacity-50 font-thin">Catálogo</span></br>{companyName}
         </h1>
         <p class="text-slate-600 leading-relaxed text-lg">
-          Hemos seleccionado este conjunto de productos con cuidado para tu marca <strong>{companyName}</strong>. Creemos que representan la
-          esencia de tu marca e impactarán a tu audiencia
+          Hemos seleccionado este conjunto de productos para <strong>{companyName}</strong>. Creemos que representan la
+          esencia de tu marca e impactarán a tu audiencia.
         </p>
       </div>
       <div class="order-1 md:order-2 flex-1 flex w-full items-center justify-center">
@@ -167,7 +167,7 @@ const itemListStructuredData = {
             Descuento por volumen
           </p>
           <p class="text-slate-600 mb-2 pl-12">
-            Por <strong>pedidos superiores a 10 o 100 unidades</strong>, aplicamos un descuento especial. Añade productos al presupuesto para ver los descuentos aplicados automáticamente.
+            Por <strong>cada 10, 50, 100 o 250 unidades</strong> de cada producto, aplicamos un descuento especial. Añade productos al presupuesto para ver los descuentos aplicados automáticamente.
           </p>
         </div>
         <div>
@@ -176,7 +176,7 @@ const itemListStructuredData = {
             Objetos personalizables
           </p>
           <p class="text-slate-600 mb-2 pl-12">
-            Todos los productos son personalizables para <strong>{companyName}</strong>. Para realizar modificaciones escríbeme al email <a href="mailto:info@mrprinteto.com" class="text-indigo-500">info@mrprinteto.com</a>
+            Solo los productos etiquetados como <strong>personalizables</strong> podrán ser modificados. Para realizar las personalizaciones, una vez realizado el pedido, enviar un email a <a href="mailto:info@mrprinteto.com" class="text-indigo-500">info@mrprinteto.com</a> con tu logo en png y svg (si es posible).
           </p>
         </div>
       </div>
@@ -382,7 +382,7 @@ const itemListStructuredData = {
         Los productos y precios mostrados son exclusivos para {companyName}, no son aplicables a otros clientes o para el público general. <br>
       </p>
       <div class="flex gap-4 text-slate-500 text-xl">
-        <a class="hover:text-slate-700 transition" href={companyUrl} aria-label={`Web ${companyName}`} target="_blank" rel="noreferrer">
+        <a class="hover:text-slate-700 transition" href="https://mrprinteto.com" aria-label="Web MrPrinteto" target="_blank" rel="noreferrer">
           <i class="fa-solid fa-earth-europe"></i>
         </a>
         <a class="hover:text-slate-700 transition" href="https://instagram.com/mrprinteto" aria-label="Instagram @mrprinteto" target="_blank" rel="noreferrer">
