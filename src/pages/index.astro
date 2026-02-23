@@ -41,7 +41,7 @@ const companySlug = company?.slug || config.companySlug;
 const companyUrl = ensureAbsoluteUrl(company?.url);
 const companyLogo = company?.logo;
 const whatsappMessage = `Hola MrPrinteto, te contacto porque necesito ayuda con mi catalogo de ${companyName}`;
-const whatsappUrl = `https://wa.me/34686520345?text=${encodeURIComponent(whatsappMessage)}`;
+const whatsappUrl = `https://wa.me/34679553858?text=${encodeURIComponent(whatsappMessage)}`;
 
 const canonicalUrl = new URL('/', companyUrl).toString();
 const seoTitle = `Catálogo privado de ${companyName}`;
@@ -140,7 +140,7 @@ const itemListStructuredData = {
     <header class="flex flex-col md:flex-row md:items-center justify-between mb-16 gap-4">
       <div class="order-2 md:order-1 max-w-xl min-w-0">
         <h1 class="text-3xl md:text-6xl font-black text-indigo-500 mb-8 tracking-tight mt-10 md:mt-0 break-words">
-          <span class="opacity-50 font-thin">Catálogo</span></br>{companyName}
+          <span class="opacity-50 font-thin">Catálogo</span><br>{companyName}
         </h1>
         <p class="text-slate-600 leading-relaxed text-lg">
           Hemos seleccionado este conjunto de productos para <strong>{companyName}</strong>. Creemos que representan la
@@ -290,7 +290,7 @@ const itemListStructuredData = {
           </div>
 
           <div class="relative border-t border-dashed border-slate-300 pt-4 space-y-2">
-            <div id="presupuesto-savings-row" class="hidden mt-1 flex items-center justify-between text-sm text-slate-600">
+            <div id="presupuesto-savings-row" class="hidden mt-0 flex items-center justify-between text-sm text-slate-600">
               <span>Descuento</span>
               <span id="presupuesto-savings" class="font-semibold text-emerald-700 text-lg">0.00 €</span>
             </div>
