@@ -43,7 +43,7 @@ function getWebhookUrl(): string {
   const env = (import.meta as any).env ?? {};
   return (
     env.N8N_PEDIDO_WEBHOOK_URL ||
-    'https://n8n.mrprinteto.com/webhook-test/nuevo-pedido'
+    'https://n8n.mrprinteto.com/webhook/nuevo-pedido'
   );
 }
 
