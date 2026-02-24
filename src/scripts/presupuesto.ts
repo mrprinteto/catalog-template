@@ -4,7 +4,8 @@ type ProductRow = {
   priceBase: number;
   priceX10: number;
   priceX50: number;
-  priceX100: number;
+  priceX150: number;
+  pricex250: number;
   qty: number;
   countEl: HTMLInputElement;
   minusBtn: HTMLButtonElement;
@@ -91,7 +92,8 @@ function init(): void {
   }
 
   function getUnitPrice(row: ProductRow, qty: number): number {
-    if (qty >= 100 && row.priceX100 > 0) return row.priceX100;
+    if (qty >= 250 && row.pricex250 > 0) return row.pricex250;
+    if (qty >= 150 && row.priceX150 > 0) return row.priceX150;
     if (qty >= 50 && row.priceX50 > 0) return row.priceX50;
     if (qty >= 10 && row.priceX10 > 0) return row.priceX10;
     return row.priceBase;
@@ -267,7 +269,8 @@ function init(): void {
     const priceBase = Number(card.dataset.productPrice ?? 0) || 0;
     const priceX10 = Number(card.dataset.productPriceX10 ?? 0) || 0;
     const priceX50 = Number(card.dataset.productPriceX50 ?? 0) || 0;
-    const priceX100 = Number(card.dataset.productPriceX100 ?? 0) || 0;
+    const priceX150 = Number(card.dataset.productPriceX150 ?? 0) || 0;
+    const pricex250 = Number(card.dataset.productPriceX250 ?? 0) || 0;
     const countEl = card.querySelector<HTMLInputElement>('[data-role="count"]');
     const minusBtn = card.querySelector<HTMLButtonElement>('[data-action="decrement"]');
     const plusBtn = card.querySelector<HTMLButtonElement>('[data-action="increment"]');
@@ -279,7 +282,8 @@ function init(): void {
       priceBase,
       priceX10,
       priceX50,
-      priceX100,
+      priceX150,
+      pricex250,
       qty: 0,
       countEl,
       minusBtn,

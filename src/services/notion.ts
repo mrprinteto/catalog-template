@@ -11,7 +11,8 @@ export interface Product {
   price: number;
   priceX10: number;
   priceX50: number;
-  priceX100: number;
+  priceX150: number;
+  pricex250: number;
   description: string;
   image: string;
   company?: Company | null;
@@ -405,6 +406,10 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
   }
 
   const cacheKey = `catalog-${config.companySlug}`;
+
+  if (bypassCache) {
+    cache.delete(cacheKey);
+  }
   
   // Check cache
   const cached = cache.get(cacheKey);
@@ -486,7 +491,8 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
       price: p.Price?.formula?.number ?? 0,
       priceX10: p.Price_x10?.formula?.number ?? 0,
       priceX50: p.Price_x50?.formula?.number ?? 0,
-      priceX100: p.Price_x100?.formula?.number ?? 0,
+      priceX150: p.Price_x150?.formula?.number ?? 0,
+      pricex250: p.Price_x250?.formula?.number ?? 0,
       description: p.Description?.rich_text?.[0]?.plain_text ?? '',
       image: p.Image?.url ?? '',
       company,
@@ -497,7 +503,7 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
 
   // Store in cache only when products are available.
   // This avoids stale empty results persisting for 1 hour.
-  if (catalogData.products.length > 0) {
+  if (!bypassCache && catalogData.products.length > 0) {
     cache.set(cacheKey, {
       data: catalogData,
       timestamp: Date.now(),
@@ -507,8 +513,8 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
   return catalogData;
 }
 
-export async function getFilteredProducts(): Promise<Product[]> {
-  const { products } = await getCatalogData();
+export async function getFilteredProducts(options: GetCatalogDataOptions = {}): Promise<Product[]> {
+  const { products } = await getCatalogData(options);
   return products;
 }
 

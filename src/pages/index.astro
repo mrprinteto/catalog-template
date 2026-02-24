@@ -11,7 +11,8 @@ export const prerender = false;
 type ProductWithPrices = Product & {
   priceX10: number;
   priceX50: number;
-  priceX100: number;
+  priceX150: number;
+  pricex250: number;
 };
 
 function ensureAbsoluteUrl(value?: string): string {
@@ -167,7 +168,7 @@ const itemListStructuredData = {
             Descuento por volumen
           </p>
           <p class="text-slate-600 mb-2 pl-12">
-            Por <strong>cada 10, 50, 100 o 250 unidades</strong> de cada producto, aplicamos un descuento especial. Añade productos al presupuesto para ver los descuentos aplicados automáticamente.
+            Por <strong>cada 10, 50, 150 o 250 unidades</strong> de cada producto, aplicamos un descuento especial. Añade productos al presupuesto para ver los descuentos aplicados automáticamente.
           </p>
         </div>
         <div>
@@ -192,7 +193,8 @@ const itemListStructuredData = {
               const rawPrice = typeof productWithPrices.price === 'number' ? productWithPrices.price : Number(productWithPrices.price) || 0;
               const priceX10 = typeof productWithPrices.priceX10 === 'number' ? productWithPrices.priceX10 : Number(productWithPrices.priceX10) || 0;
               const priceX50 = typeof productWithPrices.priceX50 === 'number' ? productWithPrices.priceX50 : Number(productWithPrices.priceX50) || 0;
-              const priceX100 = typeof productWithPrices.priceX100 === 'number' ? productWithPrices.priceX100 : Number(productWithPrices.priceX100) || 0;
+              const priceX150 = typeof productWithPrices.priceX150 === 'number' ? productWithPrices.priceX150 : Number(productWithPrices.priceX150) || 0;
+              const pricex250 = typeof productWithPrices.pricex250 === 'number' ? productWithPrices.pricex250 : Number(productWithPrices.pricex250) || 0;
               const displayPrice = `${rawPrice} €`;
               return (
                 <div
@@ -202,7 +204,8 @@ const itemListStructuredData = {
                   data-product-price={rawPrice}
                   data-product-price-x10={priceX10}
                   data-product-price-x50={priceX50}
-                  data-product-price-x100={priceX100}
+                  data-product-price-x150={priceX150}
+                  data-product-price-x250={pricex250}
                 >
                   <div class="flex justify-between items-center mb-4 gap-3">
                     <div>
@@ -377,30 +380,40 @@ const itemListStructuredData = {
       </div>
     </div>
 
-    <footer class="mt-24 pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
-      <p class="text-slate-500 text-xs">
+    <footer class="mt-24 pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-start gap-6">
+      <div class="flex flex-col items-start gap-3">
+        <a href="https://mrprinteto.com" target="_blank" rel="noreferrer" class="flex items-center gap-3 text-slate-700 hover:text-slate-900 transition" aria-label="MrPrinteto">
+          <img
+            src="https://assets.mrprinteto.com/branding/logo/mrp-logo.png?1"
+            alt="Logo MrPrinteto"
+            class="h-14 rounded-md object-cover"
+            loading="lazy"
+          />
+        </a>
+        <div class="flex gap-4 text-slate-500 text-xl">
+          <a class="hover:text-slate-700 transition" href="https://mrprinteto.com" aria-label="Web MrPrinteto" target="_blank" rel="noreferrer">
+            <i class="fa-solid fa-earth-europe"></i>
+          </a>
+          <a class="hover:text-slate-700 transition" href="https://instagram.com/mrprinteto" aria-label="Instagram @mrprinteto" target="_blank" rel="noreferrer">
+            <i class="fa-brands fa-instagram"></i>
+          </a>
+          <a class="hover:text-slate-700 transition" href="https://www.tiktok.com/@mrprinteto" aria-label="TikTok @mrprinteto" target="_blank" rel="noreferrer">
+            <i class="fa-brands fa-tiktok"></i>
+          </a>
+          <a class="hover:text-slate-700 transition" href="https://youtube.com/@mrprinteto" aria-label="YouTube @mrprinteto" target="_blank" rel="noreferrer">
+            <i class="fa-brands fa-youtube"></i>
+          </a>
+          <a class="hover:text-slate-700 transition" href="https://www.threads.net/@mrprinteto" aria-label="Threads @mrprinteto" target="_blank" rel="noreferrer">
+            <i class="fa-brands fa-threads"></i>
+          </a>
+          <a class="hover:text-slate-700 transition" href="https://discord.gg/g9c7Nhrkea" aria-label="Discord" target="_blank" rel="noreferrer">
+            <i class="fa-brands fa-discord"></i>
+          </a>
+        </div>
+      </div>
+      <p class="text-slate-500 text-xs md:text-right md:whitespace-nowrap">
         Los productos y precios mostrados son exclusivos para {companyName}, no son aplicables a otros clientes o para el público general. <br>
       </p>
-      <div class="flex gap-4 text-slate-500 text-xl">
-        <a class="hover:text-slate-700 transition" href="https://mrprinteto.com" aria-label="Web MrPrinteto" target="_blank" rel="noreferrer">
-          <i class="fa-solid fa-earth-europe"></i>
-        </a>
-        <a class="hover:text-slate-700 transition" href="https://instagram.com/mrprinteto" aria-label="Instagram @mrprinteto" target="_blank" rel="noreferrer">
-          <i class="fa-brands fa-instagram"></i>
-        </a>
-        <a class="hover:text-slate-700 transition" href="https://www.tiktok.com/@mrprinteto" aria-label="TikTok @mrprinteto" target="_blank" rel="noreferrer">
-          <i class="fa-brands fa-tiktok"></i>
-        </a>
-        <a class="hover:text-slate-700 transition" href="https://youtube.com/@mrprinteto" aria-label="YouTube @mrprinteto" target="_blank" rel="noreferrer">
-          <i class="fa-brands fa-youtube"></i>
-        </a>
-        <a class="hover:text-slate-700 transition" href="https://www.threads.net/@mrprinteto" aria-label="Threads @mrprinteto" target="_blank" rel="noreferrer">
-          <i class="fa-brands fa-threads"></i>
-        </a>
-        <a class="hover:text-slate-700 transition" href="https://discord.gg/g9c7Nhrkea" aria-label="Discord" target="_blank" rel="noreferrer">
-          <i class="fa-brands fa-discord"></i>
-        </a>
-      </div>
     </footer>
   </div>
 
