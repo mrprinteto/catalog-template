@@ -6,6 +6,7 @@ export const prerender = false;
 
 type PresupuestoItem = {
   id: string;
+  code: string;
   name: string;
   qty: number;
   unitPrice: number;

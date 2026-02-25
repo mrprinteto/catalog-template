@@ -6,12 +6,12 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export interface Product {
   id: string;
+  code: string;
   name: string;
   customized: boolean;
   price: number;
-  priceX10: number;
-  priceX50: number;
-  priceX150: number;
+  priceX25: number;
+  priceX100: number;
   pricex250: number;
   description: string;
   image: string;
@@ -143,6 +143,67 @@ function getTextPropertyValue(property: any): string {
   if (property.url) return property.url;
 
   return '';
+}
+
+function getStringPropertyValue(property: any): string {
+  const text = getTextPropertyValue(property).trim();
+  if (text) return text;
+
+  const uniqueIdNumber = property?.unique_id?.number;
+  if (typeof uniqueIdNumber === 'number') {
+    const uniqueIdPrefix = property?.unique_id?.prefix;
+    if (typeof uniqueIdPrefix === 'string' && uniqueIdPrefix.trim()) {
+      return `${uniqueIdPrefix.trim()}-${uniqueIdNumber}`;
+    }
+    return String(uniqueIdNumber);
+  }
+
+  if (typeof property?.number === 'number') return String(property.number);
+  if (typeof property?.formula?.number === 'number') return String(property.formula.number);
+  if (typeof property?.rollup?.number === 'number') return String(property.rollup.number);
+
+  return '';
+}
+
+function getPropertyByCandidates(properties: any, candidates: string[]): any {
+  if (!properties) return undefined;
+
+  for (const candidate of candidates) {
+    if (properties[candidate]) return properties[candidate];
+  }
+
+  const normalizedCandidates = candidates.map((candidate) =>
+    candidate
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+  );
+
+  for (const [key, value] of Object.entries(properties)) {
+    const normalizedKey = key
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+    if (normalizedCandidates.includes(normalizedKey)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function getNumberPropertyValue(property: any): number {
+  if (!property) return 0;
+
+  if (typeof property.number === 'number') return property.number;
+  if (typeof property.formula?.number === 'number') return property.formula.number;
+  if (typeof property.rollup?.number === 'number') return property.rollup.number;
+
+  const parsedFromString = Number(property.formula?.string);
+  if (!Number.isNaN(parsedFromString)) return parsedFromString;
+
+  return 0;
 }
 
 function getImagePropertyValue(property: any): string {
@@ -484,15 +545,17 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
 
   const products = productPages.map((page: any): Product => {
     const p = page.properties;
+    const codeProperty = getPropertyByCandidates(p, ['Code', 'CODE', 'Código', 'Codigo']);
+
     return {
       id: page.id,
+      code: getStringPropertyValue(codeProperty),
       name: p.Name?.title?.[0]?.plain_text ?? '',
       customized: p.Customized?.checkbox ?? p.customized?.checkbox ?? false,
-      price: p.Price?.formula?.number ?? 0,
-      priceX10: p.Price_x10?.formula?.number ?? 0,
-      priceX50: p.Price_x50?.formula?.number ?? 0,
-      priceX150: p.Price_x150?.formula?.number ?? 0,
-      pricex250: p.Price_x250?.formula?.number ?? 0,
+      price: getNumberPropertyValue(p.Price),
+      priceX25: getNumberPropertyValue(p.Price_x25),
+      priceX100: getNumberPropertyValue(p.Price_x100),
+      pricex250: getNumberPropertyValue(p.Price_x250),
       description: p.Description?.rich_text?.[0]?.plain_text ?? '',
       image: p.Image?.url ?? '',
       company,

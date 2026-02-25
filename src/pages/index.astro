@@ -9,9 +9,8 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 export const prerender = false;
 
 type ProductWithPrices = Product & {
-  priceX10: number;
-  priceX50: number;
-  priceX150: number;
+  priceX25: number;
+  priceX100: number;
   pricex250: number;
 };
 
@@ -144,8 +143,8 @@ const itemListStructuredData = {
           <span class="opacity-50 font-thin">Catálogo</span><br>{companyName}
         </h1>
         <p class="text-slate-600 leading-relaxed text-lg">
-          Desde <strong>MrPrinteto</strong> hemos seleccionado este conjunto de productos para <strong>{companyName}</strong>. Creemos que representan la
-          esencia de tu marca e impactarán a tu audiencia.
+          Desde <strong>MrPrinteto</strong>&reg; te presentamos este catálogo de productos para <strong>{companyName}</strong>.
+          Creemos que representan la esencia de tu marca y tendrán un impacto en tu audiencia.
         </p>
       </div>
       <div class="order-1 md:order-2 flex-1 flex w-full items-center justify-center">
@@ -168,16 +167,18 @@ const itemListStructuredData = {
             Descuento por volumen
           </p>
           <p class="text-slate-600 mb-2 pl-12">
-            Por <strong>cada 10, 50, 150 o 250 unidades</strong> de cada producto, aplicamos un descuento especial. Añade productos al presupuesto para ver los descuentos aplicados automáticamente.
+            Por <strong>cada 25, 100 o 250 unidades</strong> de cada producto aplicamos un descuento adicional.
+            Añade productos al presupuesto para ver los descuentos aplicados.
           </p>
         </div>
         <div>
           <p class="text-slate-800 mb-2 font-semibold text-lg flex items-center gap-2">
-            <i class="fa fa-palette text-indigo-400 text-3xl" aria-hidden="true"></i>
+            <i class="fa fa-pen-ruler text-indigo-400 text-3xl" aria-hidden="true"></i>
             Objetos personalizables
           </p>
           <p class="text-slate-600 mb-2 pl-12">
-            Solo los productos etiquetados como <strong>personalizables</strong> podrán ser modificados. Para realizar las personalizaciones, una vez realizado el pedido, enviar un email a <a href="mailto:info@mrprinteto.com" class="text-indigo-500">info@mrprinteto.com</a> con tu logo en png y svg (si es posible).
+            Solo los productos etiquetados como <strong>personalizables</strong> podrán ser modificados.
+            Una vez realizado el pedido, te contactaremos por email..
           </p>
         </div>
       </div>
@@ -191,27 +192,27 @@ const itemListStructuredData = {
             {products.map((product) => {
               const productWithPrices = product as ProductWithPrices;
               const rawPrice = typeof productWithPrices.price === 'number' ? productWithPrices.price : Number(productWithPrices.price) || 0;
-              const priceX10 = typeof productWithPrices.priceX10 === 'number' ? productWithPrices.priceX10 : Number(productWithPrices.priceX10) || 0;
-              const priceX50 = typeof productWithPrices.priceX50 === 'number' ? productWithPrices.priceX50 : Number(productWithPrices.priceX50) || 0;
-              const priceX150 = typeof productWithPrices.priceX150 === 'number' ? productWithPrices.priceX150 : Number(productWithPrices.priceX150) || 0;
+              const priceX25 = typeof productWithPrices.priceX25 === 'number' ? productWithPrices.priceX25 : Number(productWithPrices.priceX25) || 0;
+              const priceX100 = typeof productWithPrices.priceX100 === 'number' ? productWithPrices.priceX100 : Number(productWithPrices.priceX100) || 0;
               const pricex250 = typeof productWithPrices.pricex250 === 'number' ? productWithPrices.pricex250 : Number(productWithPrices.pricex250) || 0;
               const displayPrice = `${rawPrice} €`;
               return (
                 <div
                   class="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white/90 p-4 md:p-5 flex flex-col shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-indigo-200"
                   data-product-id={productWithPrices.id}
+                  data-product-code={productWithPrices.code || ''}
+                  data-product-customized={productWithPrices.customized ? 'true' : 'false'}
                   data-product-name={productWithPrices.name || 'Producto'}
                   data-product-price={rawPrice}
-                  data-product-price-x10={priceX10}
-                  data-product-price-x50={priceX50}
-                  data-product-price-x150={priceX150}
+                  data-product-price-x25={priceX25}
+                  data-product-price-x100={priceX100}
                   data-product-price-x250={pricex250}
                 >
                   <div class="flex justify-between items-center mb-4 gap-3">
                     <div>
                       {productWithPrices.customized && (
                         <span class="inline-flex items-center px-3 py-1 rounded-full border border-slate-200 bg-indigo-500 text-xs font-medium text-white">
-                          <i class="fa fa-sliders mr-2"></i> Personalizable
+                          <i class="fa fa-pen-ruler mr-2"></i> Personalizable
                         </span>
                       )}
                     </div>
@@ -279,7 +280,7 @@ const itemListStructuredData = {
       </div>
 
       <aside class="xl:sticky xl:top-6 space-y-4">
-        <section id="presupuesto" class="relative overflow-hidden rounded-2xl border border-slate-300 bg-white p-5 shadow-md font-mono" data-company-name={companyName} data-company-slug={companySlug}>
+        <section id="presupuesto" class="relative overflow-hidden rounded-2xl border border-slate-300 bg-white p-5 shadow-xl shadow-slate-500/50 font-mono" data-company-name={companyName} data-company-slug={companySlug}>
           <span class="pointer-events-none absolute -left-3 top-20 h-6 w-6 rounded-full bg-indigo-100"></span>
           <span class="pointer-events-none absolute -right-3 top-20 h-6 w-6 rounded-full bg-indigo-100"></span>
 
@@ -321,7 +322,7 @@ const itemListStructuredData = {
             data-company-slug={companySlug}
             class="w-full px-4 py-2.5 rounded-full bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors duration-300">
             <i class="fa-solid fa-paper-plane mr-2 text-sm"></i>
-            Confirmar presupuesto</button>
+            Confirmar pedido</button>
           <button
             id="catalog-pdf-btn"
             data-client={companySlug}

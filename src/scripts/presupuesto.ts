@@ -1,10 +1,11 @@
 type ProductRow = {
   id: string;
+  code: string;
+  customized: boolean;
   name: string;
   priceBase: number;
-  priceX10: number;
-  priceX50: number;
-  priceX150: number;
+  priceX25: number;
+  priceX100: number;
   pricex250: number;
   qty: number;
   countEl: HTMLInputElement;
@@ -13,6 +14,7 @@ type ProductRow = {
 
 type PresupuestoItem = {
   id: string;
+  code: string;
   name: string;
   qty: number;
   unitPrice: number;
@@ -93,9 +95,8 @@ function init(): void {
 
   function getUnitPrice(row: ProductRow, qty: number): number {
     if (qty >= 250 && row.pricex250 > 0) return row.pricex250;
-    if (qty >= 150 && row.priceX150 > 0) return row.priceX150;
-    if (qty >= 50 && row.priceX50 > 0) return row.priceX50;
-    if (qty >= 10 && row.priceX10 > 0) return row.priceX10;
+    if (qty >= 100 && row.priceX100 > 0) return row.priceX100;
+    if (qty >= 25 && row.priceX25 > 0) return row.priceX25;
     return row.priceBase;
   }
 
@@ -136,6 +137,7 @@ function init(): void {
 
       return {
         id: row.id,
+        code: row.code,
         name: row.name,
         qty: row.qty,
         unitPrice,
@@ -177,14 +179,42 @@ function init(): void {
 
     for (const row of rows) {
       const line = document.createElement('div');
-      line.className = 'flex items-center justify-between gap-3';
+      line.className = 'flex items-start justify-between gap-3';
 
       const left = document.createElement('div');
-      left.className = 'flex flex-col';
+      left.className = 'min-w-0 flex-1 flex flex-col';
+
+      const right = document.createElement('div');
+      right.className = 'flex shrink-0 flex-col items-end';
+
+      const rightTop = document.createElement('div');
+      rightTop.className = 'flex items-center gap-1';
+
+      const nameRow = document.createElement('div');
+      nameRow.className = 'flex items-baseline gap-2';
 
       const name = document.createElement('span');
       name.className = 'font-semibold text-slate-900';
       name.textContent = row.name;
+      nameRow.appendChild(name);
+
+      if (row.customized) {
+        const customizableIcon = document.createElement('i');
+        customizableIcon.className = 'fa fa-pen-ruler text-[10px] text-indigo-500';
+        customizableIcon.setAttribute('aria-hidden', 'true');
+        nameRow.appendChild(customizableIcon);
+      }
+
+      if (row.code) {
+        const code = document.createElement('span');
+        code.className = 'font-light text-xs text-slate-400';
+        code.textContent = row.code;
+        rightTop.appendChild(code);
+      }
+
+      if (rightTop.childElementCount > 0) {
+        right.appendChild(rightTop);
+      }
 
       const meta = document.createElement('span');
       meta.className = 'text-sm text-slate-500';
@@ -209,13 +239,14 @@ function init(): void {
         meta.appendChild(appliedPrice);
       }
 
-      left.appendChild(name);
+      left.appendChild(nameRow);
       left.appendChild(meta);
 
-      const right = document.createElement('span');
-      right.className = 'font-semibold text-slate-900';
+      const subtotalEl = document.createElement('span');
+      subtotalEl.className = 'font-semibold text-slate-900';
       const subtotal = row.qty * unitPrice;
-      right.textContent = formatCurrency(subtotal);
+      subtotalEl.textContent = formatCurrency(subtotal);
+      right.appendChild(subtotalEl);
 
       line.appendChild(left);
       line.appendChild(right);
@@ -265,11 +296,12 @@ function init(): void {
   for (const card of cards) {
     const id = card.dataset.productId ?? '';
     if (!id) continue;
+    const code = card.dataset.productCode ?? '';
+    const customized = card.dataset.productCustomized === 'true';
     const name = card.dataset.productName ?? 'Producto';
     const priceBase = Number(card.dataset.productPrice ?? 0) || 0;
-    const priceX10 = Number(card.dataset.productPriceX10 ?? 0) || 0;
-    const priceX50 = Number(card.dataset.productPriceX50 ?? 0) || 0;
-    const priceX150 = Number(card.dataset.productPriceX150 ?? 0) || 0;
+    const priceX25 = Number(card.dataset.productPriceX25 ?? 0) || 0;
+    const priceX100 = Number(card.dataset.productPriceX100 ?? 0) || 0;
     const pricex250 = Number(card.dataset.productPriceX250 ?? 0) || 0;
     const countEl = card.querySelector<HTMLInputElement>('[data-role="count"]');
     const minusBtn = card.querySelector<HTMLButtonElement>('[data-action="decrement"]');
@@ -278,11 +310,12 @@ function init(): void {
 
     const row: ProductRow = {
       id,
+      code,
+      customized,
       name,
       priceBase,
-      priceX10,
-      priceX50,
-      priceX150,
+      priceX25,
+      priceX100,
       pricex250,
       qty: 0,
       countEl,
@@ -347,7 +380,7 @@ function init(): void {
     notificationModalNode.classList.remove('flex');
   }
 
-  function openNotificationModal(title: string, message: string, kind: 'success' | 'error'): void {
+  function openNotificationModal(title: string, message: string, kind: 'success' | 'warning' | 'error'): void {
     notificationTitleNode.textContent = title;
     notificationMessageNode.innerHTML = message;
 
@@ -360,10 +393,10 @@ function init(): void {
     // Successo: verde; Warning: naranja; Error: rojo
     if (kind === 'success') {
       notificationIconNode.classList.add('bg-emerald-100', 'text-emerald-700');
-    } else if (kind === 'error') {
-      notificationIconNode.classList.add('bg-rose-100', 'text-rose-700');
+    } else if (kind === 'warning') {
+      notificationIconNode.classList.add('bg-yellow-100', 'text-yellow-700');
     } else {
-      notificationIconNode.classList.add('bg-orange-100', 'text-orange-500');
+      notificationIconNode.classList.add('bg-rose-100', 'text-rose-700');
     }
 
     notificationIconNode.appendChild(icon);
