@@ -91,13 +91,32 @@ function buildPresupuestoHtmlDocument(targetHtml: string): string {
       overflow: visible !important;
       padding-right: 0 !important;
       max-width: 680px;
-      margin: 0 auto;
+      margin-bottom: 20px;
     }
 
     #pdf-render-root #presupuesto-footer {
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       max-width: 680px;
       margin: 20px auto 0 auto;
+    }
+
+    #pdf-render-root #presupuesto .line-through.text-slate-400 {
+      text-decoration: none !important;
+      position: relative;
+      display: inline-block;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.2;
+    }
+
+    #pdf-render-root #presupuesto .line-through.text-slate-400::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 80%;
+      border-top: 1px solid currentColor;
+      opacity: 0.95;
+      pointer-events: none;
     }
 
   </style>
