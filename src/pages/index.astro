@@ -5,7 +5,6 @@ import { config } from '../config/filter';
 import '../styles/global.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
-// On-Demand ISR: page cached, revalidation triggered via /api/revalidate
 export const prerender = false;
 
 type ProductWithPrices = Product & {
@@ -31,11 +30,10 @@ function ensureAbsoluteUrl(value?: string): string {
   }
 }
 
-const forceRefresh = Astro.url.searchParams.has('refresh');
-const { company, products: catalogProducts } = await getCatalogData({
-  bypassCache: forceRefresh,
-});
-const products = catalogProducts as ProductWithPrices[];
+const { company, products: catalogProducts } = await getCatalogData();
+const products = [...(catalogProducts as ProductWithPrices[])].sort(
+  (a, b) => Number(a.customized) - Number(b.customized)
+);
 const companyName = company?.name || config.companySlug;
 const companySlug = company?.slug || config.companySlug;
 const companyUrl = ensureAbsoluteUrl(company?.url);
@@ -198,7 +196,7 @@ const itemListStructuredData = {
               const displayPrice = `${rawPrice} €`;
               return (
                 <div
-                  class="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white/90 p-4 md:p-5 flex flex-col shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-indigo-200"
+                  class="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white/90 p-4 md:p-5 flex flex-col shadow-sm transition-all duration-300 hover:-translate-y-3 hover:shadow-xl hover:border-indigo-200"
                   data-product-id={productWithPrices.id}
                   data-product-code={productWithPrices.code || ''}
                   data-product-customized={productWithPrices.customized ? 'true' : 'false'}

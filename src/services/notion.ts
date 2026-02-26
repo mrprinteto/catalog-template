@@ -2,7 +2,6 @@ import { config } from '../config/filter';
 
 const NOTION_API = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export interface Product {
   id: string;
@@ -35,24 +34,6 @@ export interface CatalogData {
   company: Company | null;
   products: Product[];
 }
-
-interface GetCatalogDataOptions {
-  bypassCache?: boolean;
-}
-
-interface CacheEntry {
-  data: CatalogData;
-  timestamp: number;
-}
-
-interface CompanyKeyCacheEntry {
-  key: string;
-  timestamp: number;
-}
-
-// In-memory LRU cache (simple implementation)
-const cache = new Map<string, CacheEntry>();
-const companyKeyCache = new Map<string, CompanyKeyCacheEntry>();
 
 function safeCompareSecret(left: string, right: string): boolean {
   const maxLength = Math.max(left.length, right.length);
@@ -449,8 +430,7 @@ async function getCompanyRecordBySlug(
   };
 }
 
-export async function getCatalogData(options: GetCatalogDataOptions = {}): Promise<CatalogData> {
-  const { bypassCache = false } = options;
+export async function getCatalogData(): Promise<CatalogData> {
   const env = (import.meta as any).env ?? {};
   const token = env.NOTION_TOKEN;
   const dbId = env.NOTION_DATABASE_ID;
@@ -464,23 +444,6 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
 
   if (!config.companySlug) {
     throw new Error('Falta NOTION_COMPANY_SLUG en .env');
-  }
-
-  const cacheKey = `catalog-${config.companySlug}`;
-
-  if (bypassCache) {
-    cache.delete(cacheKey);
-  }
-  
-  // Check cache
-  const cached = cache.get(cacheKey);
-  if (
-    !bypassCache &&
-    cached &&
-    Date.now() - cached.timestamp < CACHE_TTL_MS &&
-    cached.data.products.length > 0
-  ) {
-    return cached.data;
   }
 
   const company = await findCompanyBySlug(token, companiesDbId, config.companySlug);
@@ -562,22 +525,11 @@ export async function getCatalogData(options: GetCatalogDataOptions = {}): Promi
     };
   });
 
-  const catalogData: CatalogData = { company, products };
-
-  // Store in cache only when products are available.
-  // This avoids stale empty results persisting for 1 hour.
-  if (!bypassCache && catalogData.products.length > 0) {
-    cache.set(cacheKey, {
-      data: catalogData,
-      timestamp: Date.now(),
-    });
-  }
-
-  return catalogData;
+  return { company, products };
 }
 
-export async function getFilteredProducts(options: GetCatalogDataOptions = {}): Promise<Product[]> {
-  const { products } = await getCatalogData(options);
+export async function getFilteredProducts(): Promise<Product[]> {
+  const { products } = await getCatalogData();
   return products;
 }
 
@@ -595,18 +547,7 @@ export async function validateCompanyKeyForCurrentCatalog(inputKey: string): Pro
     throw new Error('Faltan NOTION_TOKEN o NOTION_COMPANIES_DATABASE_ID en .env');
   }
 
-  const cacheKey = `company-key-${config.companySlug}`;
-  const cachedEntry = companyKeyCache.get(cacheKey);
-  if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL_MS) {
-    if (!cachedEntry.key) return false;
-    return safeCompareSecret(cachedEntry.key, normalizedInputKey);
-  }
-
   const { key } = await getCompanyRecordBySlug(token, companiesDbId, config.companySlug);
-  companyKeyCache.set(cacheKey, {
-    key,
-    timestamp: Date.now(),
-  });
 
   if (!key) return false;
 
