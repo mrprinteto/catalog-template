@@ -25,6 +25,7 @@ type PresupuestoItem = {
 type PresupuestoPayload = {
   companyName: string;
   companySlug: string;
+  clientEmail: string;
   items: PresupuestoItem[];
   subtotal: number;
   discount: number;
@@ -104,7 +105,7 @@ function init(): void {
     return Array.from(state.values()).filter((r) => r.qty > 0);
   }
 
-  function getCompanyInfo(): { companyName: string; companySlug: string } {
+  function getCompanyInfo(): { companyName: string; companySlug: string; clientEmail: string } {
     const presupuestoSection = document.getElementById('presupuesto');
     const submitButton = document.getElementById('catalog-submit-btn');
 
@@ -116,8 +117,12 @@ function init(): void {
       presupuestoSection?.getAttribute('data-company-slug') ||
       submitButton?.getAttribute('data-company-slug') ||
       '';
+    const clientEmail =
+      presupuestoSection?.getAttribute('data-company-email') ||
+      submitButton?.getAttribute('data-company-email') ||
+      '';
 
-    return { companyName, companySlug };
+    return { companyName, companySlug, clientEmail };
   }
 
   function buildPresupuestoPayload(): PresupuestoPayload | null {
@@ -147,11 +152,12 @@ function init(): void {
     });
 
     const discount = Math.max(0, subtotal - total);
-    const { companyName, companySlug } = getCompanyInfo();
+    const { companyName, companySlug, clientEmail } = getCompanyInfo();
 
     return {
       companyName,
       companySlug,
+      clientEmail,
       items,
       subtotal,
       discount,
@@ -347,35 +353,78 @@ function init(): void {
   (window as any).getPresupuestoPayload = buildPresupuestoPayload;
 
   const submitBtn = document.getElementById('catalog-submit-btn');
-  const modalEl = document.getElementById('catalog-submit-modal');
-  const keyInput = document.getElementById('catalog-submit-key') as HTMLInputElement | null;
-  const modalErrorEl = document.getElementById('catalog-submit-modal-error');
-  const cancelBtn = document.getElementById('catalog-submit-cancel') as HTMLButtonElement | null;
-  const confirmBtn = document.getElementById('catalog-submit-confirm') as HTMLButtonElement | null;
   const notificationModalEl = document.getElementById('catalog-notification-modal');
   const notificationTitleEl = document.getElementById('catalog-notification-title');
   const notificationMessageEl = document.getElementById('catalog-notification-message');
   const notificationIconEl = document.getElementById('catalog-notification-icon');
   const notificationCloseBtn = document.getElementById('catalog-notification-close') as HTMLButtonElement | null;
+  const notificationCancelBtn = document.getElementById('catalog-notification-cancel') as HTMLButtonElement | null;
+  const confirmationSubmitBtn = document.getElementById('catalog-confirmation-submit') as HTMLButtonElement | null;
+  const confirmationContentEl = document.getElementById('catalog-confirmation-content');
+  const confirmationSummaryEl = document.getElementById('catalog-confirmation-summary');
+  const confirmationClientEmailEl = document.getElementById('catalog-confirmation-client-email');
 
-  if (!submitBtn || !modalEl || !keyInput || !modalErrorEl || !cancelBtn || !confirmBtn || !notificationModalEl || !notificationTitleEl || !notificationMessageEl || !notificationIconEl || !notificationCloseBtn) {
+  if (!submitBtn || !notificationModalEl || !notificationTitleEl || !notificationMessageEl || !notificationIconEl || !notificationCloseBtn || !notificationCancelBtn || !confirmationSubmitBtn || !confirmationContentEl || !confirmationSummaryEl || !confirmationClientEmailEl) {
     return;
   }
 
-  const modalElNode = modalEl;
-  const keyInputNode = keyInput;
-  const modalErrorElNode = modalErrorEl;
-  const confirmBtnNode = confirmBtn;
+  const submitBtnNode = submitBtn as HTMLButtonElement;
   const notificationModalNode = notificationModalEl;
   const notificationTitleNode = notificationTitleEl;
   const notificationMessageNode = notificationMessageEl;
   const notificationIconNode = notificationIconEl;
   const notificationCloseBtnNode = notificationCloseBtn;
+  const notificationCancelBtnNode = notificationCancelBtn;
+  const confirmationSubmitBtnNode = confirmationSubmitBtn;
+  const confirmationContentNode = confirmationContentEl;
+  const confirmationSummaryNode = confirmationSummaryEl;
+  const confirmationClientEmailNode = confirmationClientEmailEl;
+  let pendingPayload: PresupuestoPayload | null = null;
 
   const fallbackMessage =
     'Para este pedido necesitamos que nos escribas un email a <a class="font-bold text-indigo-500" href="mailto:info@mrprinteto.com">info@mrprinteto.com</a> con los detalles de lo que quieres solicitar.';
 
+  function setSubmitLoadingState(isLoading: boolean): void {
+    submitBtnNode.disabled = isLoading;
+    submitBtnNode.textContent = isLoading ? 'Enviando...' : 'Confirmar presupuesto';
+    confirmationSubmitBtnNode.disabled = isLoading;
+    confirmationSubmitBtnNode.textContent = isLoading ? 'Enviando...' : 'Confirmar';
+  }
+
+  function setNotificationIcon(kind: 'success' | 'warning' | 'error' | 'confirm'): void {
+    notificationIconNode.classList.remove(
+      'bg-emerald-100',
+      'text-emerald-700',
+      'bg-rose-100',
+      'text-rose-700',
+      'bg-yellow-100',
+      'text-yellow-700',
+      'bg-indigo-100',
+      'text-indigo-700'
+    );
+    notificationIconNode.innerHTML = '';
+
+    const icon = document.createElement('i');
+
+    if (kind === 'success') {
+      icon.className = 'fa-solid fa-check';
+      notificationIconNode.classList.add('bg-emerald-100', 'text-emerald-700');
+    } else if (kind === 'warning') {
+      icon.className = 'fa-solid fa-triangle-exclamation';
+      notificationIconNode.classList.add('bg-yellow-100', 'text-yellow-700');
+    } else if (kind === 'error') {
+      icon.className = 'fa-solid fa-triangle-exclamation';
+      notificationIconNode.classList.add('bg-rose-100', 'text-rose-700');
+    } else {
+      icon.className = 'fa-solid fa-paper-plane';
+      notificationIconNode.classList.add('bg-indigo-100', 'text-indigo-700');
+    }
+
+    notificationIconNode.appendChild(icon);
+  }
+
   function closeNotificationModal(): void {
+    pendingPayload = null;
     notificationModalNode.classList.add('hidden');
     notificationModalNode.classList.remove('flex');
   }
@@ -383,66 +432,91 @@ function init(): void {
   function openNotificationModal(title: string, message: string, kind: 'success' | 'warning' | 'error'): void {
     notificationTitleNode.textContent = title;
     notificationMessageNode.innerHTML = message;
+    notificationMessageNode.classList.remove('hidden');
+    confirmationContentNode.classList.add('hidden');
+    notificationCloseBtnNode.classList.remove('hidden');
+    notificationCancelBtnNode.classList.add('hidden');
+    confirmationSubmitBtnNode.classList.add('hidden');
+    setNotificationIcon(kind);
 
-    notificationIconNode.classList.remove('bg-emerald-100', 'text-emerald-700', 'bg-rose-100', 'text-rose-700', 'bg-yellow-100', 'text-yellow-700');
-    notificationIconNode.innerHTML = '';
-
-    const icon = document.createElement('i');
-    icon.className = kind === 'success' ? 'fa-solid fa-check' : 'fa-solid fa-triangle-exclamation';
-
-    // Successo: verde; Warning: naranja; Error: rojo
-    if (kind === 'success') {
-      notificationIconNode.classList.add('bg-emerald-100', 'text-emerald-700');
-    } else if (kind === 'warning') {
-      notificationIconNode.classList.add('bg-yellow-100', 'text-yellow-700');
-    } else {
-      notificationIconNode.classList.add('bg-rose-100', 'text-rose-700');
-    }
-
-    notificationIconNode.appendChild(icon);
     notificationModalNode.classList.remove('hidden');
     notificationModalNode.classList.add('flex');
   }
 
-  function setModalError(message: string): void {
-    if (!message) {
-      modalErrorElNode.textContent = '';
-      modalErrorElNode.classList.add('hidden');
-      return;
-    }
-    modalErrorElNode.textContent = message;
-    modalErrorElNode.classList.remove('hidden');
-  }
+  function renderConfirmationSummary(payload: PresupuestoPayload): void {
+    confirmationSummaryNode.innerHTML = '';
 
-  function openModal(): void {
-    setModalError('');
-    keyInputNode.value = '';
-    modalElNode.classList.remove('hidden');
-    modalElNode.classList.add('flex');
-    window.setTimeout(() => keyInputNode.focus(), 0);
-  }
+    for (const item of payload.items) {
+      const row = document.createElement('div');
+      row.className = 'flex items-start justify-between gap-3';
 
-  function closeModal(): void {
-    modalElNode.classList.add('hidden');
-    modalElNode.classList.remove('flex');
-    setModalError('');
-  }
+      const left = document.createElement('div');
+      left.className = 'min-w-0 flex-1';
 
-  async function submitPedido(): Promise<void> {
-    const payload = buildPresupuestoPayload();
-    if (!payload) {
-      setModalError('Añade al menos un producto para solicitar el pedido.');
-      return;
-    }
+      const right = document.createElement('div');
+      right.className = 'shrink-0 text-right';
 
-    const key = keyInputNode.value.trim();
-    if (!key) {
-      setModalError('Debes introducir una clave.');
-      return;
+      const name = document.createElement('p');
+      name.className = 'font-semibold text-slate-900';
+      name.textContent = item.name;
+
+      const meta = document.createElement('p');
+      meta.className = 'text-xs text-slate-500';
+      meta.textContent = `${item.qty} × ${formatCurrency(item.unitPrice)}`;
+
+      const subtotal = document.createElement('p');
+      subtotal.className = 'font-semibold text-slate-800';
+      subtotal.textContent = formatCurrency(item.subtotal);
+
+      left.appendChild(name);
+      left.appendChild(meta);
+      right.appendChild(subtotal);
+      row.appendChild(left);
+      row.appendChild(right);
+      confirmationSummaryNode.appendChild(row);
     }
 
-    confirmBtnNode.disabled = true;
-    confirmBtnNode.textContent = 'Validando...';
+    const divider = document.createElement('div');
+    divider.className = 'my-2 border-t border-dashed border-slate-300';
+    confirmationSummaryNode.appendChild(divider);
+
+    const subtotalRow = document.createElement('div');
+    subtotalRow.className = 'flex items-center justify-between text-xs text-slate-600';
+    subtotalRow.innerHTML = `<span>Subtotal</span><span>${formatCurrency(payload.subtotal)}</span>`;
+    confirmationSummaryNode.appendChild(subtotalRow);
+
+    const discountRow = document.createElement('div');
+    discountRow.className = 'flex items-center justify-between text-xs text-emerald-700';
+    discountRow.innerHTML = `<span>Descuento</span><span>-${formatCurrency(payload.discount)}</span>`;
+    confirmationSummaryNode.appendChild(discountRow);
+
+    const totalRow = document.createElement('div');
+    totalRow.className = 'mt-1 flex items-center justify-between font-semibold text-slate-900';
+    totalRow.innerHTML = `<span>Total</span><span>${formatCurrency(payload.total)}</span>`;
+    confirmationSummaryNode.appendChild(totalRow);
+  }
+
+  function openConfirmationModal(payload: PresupuestoPayload): void {
+    pendingPayload = payload;
+
+    notificationTitleNode.textContent = 'Confirma tu pedido';
+    notificationMessageNode.classList.add('hidden');
+    notificationMessageNode.textContent = '';
+    confirmationContentNode.classList.remove('hidden');
+    notificationCloseBtnNode.classList.add('hidden');
+    notificationCancelBtnNode.classList.remove('hidden');
+    confirmationSubmitBtnNode.classList.remove('hidden');
+    setNotificationIcon('confirm');
+
+    confirmationClientEmailNode.textContent = payload.clientEmail || 'tu email de empresa';
+    renderConfirmationSummary(payload);
+
+    notificationModalNode.classList.remove('hidden');
+    notificationModalNode.classList.add('flex');
+  }
+
+  async function submitPedido(payload: PresupuestoPayload): Promise<void> {
+    setSubmitLoadingState(true);
 
     try {
       const response = await fetch('/api/pedido', {
@@ -451,7 +525,6 @@ function init(): void {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          key,
           presupuesto: payload,
         }),
       });
@@ -464,50 +537,48 @@ function init(): void {
       }
 
       if (response.status === 401 || data?.code === 'INVALID_KEY') {
-        setModalError('La clave no es correcta.');
+        openNotificationModal(
+          'Acceso no válido',
+          'Tu sesión ha caducado. Recarga la página e introduce de nuevo la clave de acceso.',
+          'error'
+        );
         return;
       }
 
-      closeModal();
       if (response.ok && data?.success) {
-        openNotificationModal('Nos ponemos con ello!', 'Tu pedido se ha realizado correctamente. Nos pondremos en contacto contigo pronto.', 'success');
+        openNotificationModal(
+          'Pedido confirmado',
+          `Tu pedido se ha enviado correctamente. Hemos enviado un email a ${payload.clientEmail || 'tu contacto'} y también hemos avisado a nuestro equipo para ponernos en contacto contigo y acordar la producción y el pago.`,
+          'success'
+        );
+        pendingPayload = null;
       } else {
         openNotificationModal('Necesitamos más datos', fallbackMessage, 'warning');
       }
     } catch {
-      closeModal();
       openNotificationModal('Necesitamos más datos', fallbackMessage, 'error');
     } finally {
-      confirmBtnNode.disabled = false;
-      confirmBtnNode.textContent = 'Confirmar pedido';
+      setSubmitLoadingState(false);
     }
   }
 
-  submitBtn.addEventListener('click', openModal);
-  cancelBtn.addEventListener('click', closeModal);
-
-  modalElNode.addEventListener('click', (event) => {
-    if (event.target === modalElNode) {
-      closeModal();
+  submitBtnNode.addEventListener('click', () => {
+    const payload = buildPresupuestoPayload();
+    if (!payload) {
+      openNotificationModal('Añade productos', 'Selecciona al menos un producto para solicitar el pedido.', 'warning');
+      return;
     }
+
+    openConfirmationModal(payload);
   });
 
-  keyInputNode.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      void submitPedido();
-    }
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      closeModal();
-    }
-  });
-
-  confirmBtnNode.addEventListener('click', () => {
-    void submitPedido();
+  confirmationSubmitBtnNode.addEventListener('click', () => {
+    if (!pendingPayload) return;
+    void submitPedido(pendingPayload);
   });
 
   notificationCloseBtnNode.addEventListener('click', closeNotificationModal);
+  notificationCancelBtnNode.addEventListener('click', closeNotificationModal);
   notificationModalNode.addEventListener('click', (event) => {
     if (event.target === notificationModalNode) {
       closeNotificationModal();

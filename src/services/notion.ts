@@ -23,6 +23,7 @@ export interface Company {
   slug: string;
   url: string;
   logo: string;
+  email: string;
 }
 
 interface CompanyRecord {
@@ -122,6 +123,7 @@ function getTextPropertyValue(property: any): string {
   if (property.select) return property.select?.name ?? '';
   if (property.formula?.string) return property.formula.string;
   if (property.url) return property.url;
+  if (property.email) return property.email;
 
   return '';
 }
@@ -344,12 +346,23 @@ function parseCompany(page: any): Company {
     getImagePropertyValue(p.Imagen) ||
     '';
 
+  const emailProperty = getPropertyByCandidates(p, [
+    'Email',
+    'email',
+    'Correo',
+    'Correo electrónico',
+    'Correo electronico',
+    'E-mail',
+  ]);
+  const email = getTextPropertyValue(emailProperty);
+
   return {
     id: page.id,
     name,
     slug: slugify(slug),
     url,
     logo,
+    email,
   };
 }
 
@@ -531,6 +544,22 @@ export async function getCatalogData(): Promise<CatalogData> {
 export async function getFilteredProducts(): Promise<Product[]> {
   const { products } = await getCatalogData();
   return products;
+}
+
+export async function getCompanyForCurrentCatalog(): Promise<Company> {
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
+
+  if (!token || !companiesDbId) {
+    throw new Error('Faltan NOTION_TOKEN o NOTION_COMPANIES_DATABASE_ID en .env');
+  }
+
+  if (!config.companySlug) {
+    throw new Error('Falta NOTION_COMPANY_SLUG en .env');
+  }
+
+  return findCompanyBySlug(token, companiesDbId, config.companySlug);
 }
 
 export async function validateCompanyKeyForCurrentCatalog(inputKey: string): Promise<boolean> {

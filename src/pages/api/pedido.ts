@@ -3,6 +3,7 @@ import { config } from '../../config/filter';
 import { validateCompanyKeyForCurrentCatalog } from '../../services/notion';
 
 export const prerender = false;
+const ACCESS_COOKIE_NAME = 'catalog_access_key';
 
 type PresupuestoItem = {
   id: string;
@@ -17,6 +18,7 @@ type PresupuestoItem = {
 type PresupuestoPayload = {
   companyName: string;
   companySlug: string;
+  clientEmail: string;
   items: PresupuestoItem[];
   subtotal: number;
   discount: number;
@@ -32,6 +34,7 @@ function isValidPresupuesto(payload: any): payload is PresupuestoPayload {
     typeof payload === 'object' &&
     typeof payload.companyName === 'string' &&
     typeof payload.companySlug === 'string' &&
+    typeof payload.clientEmail === 'string' &&
     Array.isArray(payload.items) &&
     payload.items.length > 0 &&
     typeof payload.subtotal === 'number' &&
@@ -48,8 +51,9 @@ function getWebhookUrl(): string {
   );
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const rawBody = await request.text();
     if (!rawBody) {
       return new Response(
@@ -82,10 +86,12 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const key = typeof body?.key === 'string' ? body.key.trim() : '';
+    const keyFromBody = typeof body?.key === 'string' ? body.key.trim() : '';
+    const keyFromCookie = context.cookies.get(ACCESS_COOKIE_NAME)?.value?.trim() ?? '';
+    const key = keyFromCookie || keyFromBody;
     const presupuesto = body?.presupuesto;
 
-    if (!key || !isValidPresupuesto(presupuesto)) {
+    if (!isValidPresupuesto(presupuesto)) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -94,6 +100,20 @@ export const POST: APIRoute = async ({ request }) => {
         }),
         {
           status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (!key) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          code: 'INVALID_KEY',
+          message: 'Clave incorrecta.',
+        }),
+        {
+          status: 401,
           headers: { 'Content-Type': 'application/json' },
         }
       );
