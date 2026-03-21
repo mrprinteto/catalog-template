@@ -25,6 +25,7 @@ type PresupuestoItem = {
 type PresupuestoPayload = {
   companyName: string;
   companySlug: string;
+  companyId: string;
   clientEmail: string;
   items: PresupuestoItem[];
   subtotal: number;
@@ -105,7 +106,7 @@ function init(): void {
     return Array.from(state.values()).filter((r) => r.qty > 0);
   }
 
-  function getCompanyInfo(): { companyName: string; companySlug: string; clientEmail: string } {
+  function getCompanyInfo(): { companyName: string; companySlug: string; companyId: string; clientEmail: string } {
     const presupuestoSection = document.getElementById('presupuesto');
     const submitButton = document.getElementById('catalog-submit-btn');
 
@@ -117,12 +118,16 @@ function init(): void {
       presupuestoSection?.getAttribute('data-company-slug') ||
       submitButton?.getAttribute('data-company-slug') ||
       '';
+    const companyId =
+      presupuestoSection?.getAttribute('data-company-id') ||
+      submitButton?.getAttribute('data-company-id') ||
+      '';
     const clientEmail =
       presupuestoSection?.getAttribute('data-company-email') ||
       submitButton?.getAttribute('data-company-email') ||
       '';
 
-    return { companyName, companySlug, clientEmail };
+    return { companyName, companySlug, companyId, clientEmail };
   }
 
   function buildPresupuestoPayload(): PresupuestoPayload | null {
@@ -152,11 +157,12 @@ function init(): void {
     });
 
     const discount = Math.max(0, subtotal - total);
-    const { companyName, companySlug, clientEmail } = getCompanyInfo();
+    const { companyName, companySlug, companyId, clientEmail } = getCompanyInfo();
 
     return {
       companyName,
       companySlug,
+      companyId,
       clientEmail,
       items,
       subtotal,

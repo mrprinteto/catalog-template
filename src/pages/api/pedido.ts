@@ -18,6 +18,7 @@ type PresupuestoItem = {
 type PresupuestoPayload = {
   companyName: string;
   companySlug: string;
+  companyId: string;
   clientEmail: string;
   items: PresupuestoItem[];
   subtotal: number;
@@ -34,6 +35,7 @@ function isValidPresupuesto(payload: any): payload is PresupuestoPayload {
     typeof payload === 'object' &&
     typeof payload.companyName === 'string' &&
     typeof payload.companySlug === 'string' &&
+    typeof payload.companyId === 'string' &&
     typeof payload.clientEmail === 'string' &&
     Array.isArray(payload.items) &&
     payload.items.length > 0 &&
