@@ -32,6 +32,12 @@ function ensureAbsoluteUrl(value?: string): string {
   }
 }
 
+const CDN_IMAGE_OPTIONS = 'width=800,quality=75,format=webp';
+function getProductCdnImageUrl(code: string): string {
+  if (!code) return '';
+  return `https://assets.mrprinteto.com/cdn-cgi/image/${CDN_IMAGE_OPTIONS}/products/b2b/${encodeURIComponent(code)}/1.png`;
+}
+
 const ACCESS_COOKIE_NAME = 'catalog_access_key';
 const accessKey = Astro.cookies.get(ACCESS_COOKIE_NAME)?.value?.trim() ?? '';
 
@@ -119,7 +125,7 @@ const itemListStructuredData = hasCatalogAccess
           '@type': 'Product',
           name: product.name || 'Producto',
           description: product.description || 'Producto personalizable.',
-          image: product.image || undefined,
+          image: product.code ? getProductCdnImageUrl(product.code) : undefined,
           offers: {
             '@type': 'Offer',
             priceCurrency: 'EUR',
@@ -296,9 +302,9 @@ const itemListStructuredData = hasCatalogAccess
                     </div>
                   </div>
                   <div class="aspect-[4/3] w-full rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mb-4 overflow-hidden">
-                    {productWithPrices.image ? (
+                    {productWithPrices.code ? (
                       <img
-                        src={productWithPrices.image}
+                        src={getProductCdnImageUrl(productWithPrices.code)}
                         alt={productWithPrices.name || 'Producto'}
                         loading="lazy"
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
