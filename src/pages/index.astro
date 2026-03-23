@@ -1,7 +1,6 @@
 ---
-import { getCatalogData } from '../services/notion';
-import type { Product } from '../services/notion';
-import { validateCompanyKeyForCurrentCatalog } from '../services/notion';
+import { getCatalogData, getCatalogDataWithCompany, resolveCompanyAccess } from '../services/notion';
+import type { Product, Company } from '../services/notion';
 import { getCompanyForCurrentCatalog } from '../services/notion';
 import { config } from '../config/filter';
 import '../styles/global.css';
@@ -39,14 +38,28 @@ function getProductCdnImageUrl(code: string): string {
 }
 
 const ACCESS_COOKIE_NAME = 'catalog_access_key';
-const accessKey = Astro.cookies.get(ACCESS_COOKIE_NAME)?.value?.trim() ?? '';
+const cookieHmac = Astro.cookies.get(ACCESS_COOKIE_NAME)?.value?.trim() ?? '';
+const cookieSecret = import.meta.env.COOKIE_SECRET ?? '';
 
+// Ronda 1 — una única llamada a Notion que resuelve empresa + validación
+// simultáneamente. Antes eran dos queries idénticas en paralelo que Notion
+// degradaba, causando timeouts y reintentos (~6s extra).
 let hasCatalogAccess = false;
-if (accessKey) {
+let resolvedCompany: Company | null = null;
+
+if (cookieHmac) {
   try {
-    hasCatalogAccess = await validateCompanyKeyForCurrentCatalog(accessKey);
+    const { company, isValid } = await resolveCompanyAccess(cookieHmac, cookieSecret);
+    hasCatalogAccess = isValid;
+    resolvedCompany = company;
   } catch {
     hasCatalogAccess = false;
+  }
+} else {
+  try {
+    resolvedCompany = await getCompanyForCurrentCatalog();
+  } catch {
+    // Fallback silencioso para no bloquear pantalla de acceso.
   }
 }
 
@@ -58,19 +71,19 @@ let companyLogo = '';
 let companyEmail = '';
 let companyId = '';
 
-try {
-  const companyPreview = await getCompanyForCurrentCatalog();
-  companyName = companyPreview?.name || companyName;
-  companySlug = companyPreview?.slug || companySlug;
-  companyUrl = ensureAbsoluteUrl(companyPreview?.url);
-  companyLogo = companyPreview?.logo || '';
-  companyEmail = companyPreview?.email || '';
-} catch {
-  // Fallback silencioso para no bloquear pantalla de acceso.
+if (resolvedCompany) {
+  companyName = resolvedCompany.name || companyName;
+  companySlug = resolvedCompany.slug || companySlug;
+  companyUrl = ensureAbsoluteUrl(resolvedCompany.url);
+  companyLogo = resolvedCompany.logo || '';
+  companyEmail = resolvedCompany.email || '';
 }
 
 if (hasCatalogAccess) {
-  const { company, products: catalogProducts } = await getCatalogData();
+  // Ronda 2: queries de productos en paralelo.
+  const { company, products: catalogProducts } = resolvedCompany
+    ? await getCatalogDataWithCompany(resolvedCompany)
+    : await getCatalogData();
   products = [...(catalogProducts as ProductWithPrices[])].sort((a, b) => {
     const customizedDiff = Number(a.customized) - Number(b.customized);
     if (customizedDiff !== 0) return customizedDiff;
@@ -498,7 +511,7 @@ const itemListStructuredData = hasCatalogAccess
           <input
             id="catalog-access-key"
             type="password"
-            autocomplete="off"
+            autocomplete="new-password"
             class="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             placeholder="Introduce tu clave de acceso"
           />

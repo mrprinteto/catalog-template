@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { config } from '../../config/filter';
-import { validateCompanyKeyForCurrentCatalog } from '../../services/notion';
+import { validateCompanyHmacForCurrentCatalog } from '../../services/notion';
 
 export const prerender = false;
 const ACCESS_COOKIE_NAME = 'catalog_access_key';
@@ -88,10 +88,22 @@ export const POST: APIRoute = async (context) => {
       );
     }
 
-    const keyFromBody = typeof body?.key === 'string' ? body.key.trim() : '';
-    const keyFromCookie = context.cookies.get(ACCESS_COOKIE_NAME)?.value?.trim() ?? '';
-    const key = keyFromCookie || keyFromBody;
+    const cookieHmac = context.cookies.get(ACCESS_COOKIE_NAME)?.value?.trim() ?? '';
     const presupuesto = body?.presupuesto;
+
+    if (!cookieHmac) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          code: 'INVALID_KEY',
+          message: 'Clave incorrecta.',
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     if (!isValidPresupuesto(presupuesto)) {
       return new Response(
@@ -107,21 +119,8 @@ export const POST: APIRoute = async (context) => {
       );
     }
 
-    if (!key) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          code: 'INVALID_KEY',
-          message: 'Clave incorrecta.',
-        }),
-        {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const isValidKey = await validateCompanyKeyForCurrentCatalog(key);
+    const cookieSecret = (import.meta as any).env?.COOKIE_SECRET ?? '';
+    const isValidKey = await validateCompanyHmacForCurrentCatalog(cookieHmac, cookieSecret);
     if (!isValidKey) {
       return new Response(
         JSON.stringify({

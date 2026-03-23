@@ -67,15 +67,19 @@ async function fetchWithRetry(
   let lastError: Error | null = null;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const t0 = performance.now();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s: Notion puede tardar 6-8s en cold start
+
+      console.log(`[notion] attempt=${attempt + 1} start — ${url}`);
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
       });
-      
+      const elapsed = (performance.now() - t0).toFixed(0);
+      console.log(`[notion] attempt=${attempt + 1} status=${response.status} ${elapsed}ms — ${url}`);
+
       clearTimeout(timeoutId);
       
       if (response.ok) {
@@ -91,6 +95,8 @@ async function fetchWithRetry(
       
       return response;
     } catch (err) {
+      const elapsed = (performance.now() - t0).toFixed(0);
+      console.log(`[notion] attempt=${attempt + 1} ERROR ${elapsed}ms ${err instanceof Error ? err.message : err} — ${url}`);
       lastError = err instanceof Error ? err : new Error(String(err));
       if (attempt < maxRetries - 1) {
         const backoff = Math.pow(2, attempt) * 1000;
@@ -443,83 +449,48 @@ async function getCompanyRecordBySlug(
   };
 }
 
-export async function getCatalogData(): Promise<CatalogData> {
-  const env = (import.meta as any).env ?? {};
-  const token = env.NOTION_TOKEN;
-  const dbId = env.NOTION_DATABASE_ID;
-  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
+/**
+ * Busca los product pages de Notion para una empresa dada.
+ * Lanza todas las combinaciones (propertyName × companyId) en paralelo mediante
+ * Promise.allSettled para evitar queries secuenciales innecesarias.
+ *
+ * No se llama a getDatabaseSchema: en producción tarda 3-4s y los candidatos
+ * hardcodeados ya cubren los nombres de propiedad conocidos.
+ */
+async function fetchProductPagesForCompany(
+  token: string,
+  dbId: string,
+  company: Company
+): Promise<any[]> {
+  // Notion devuelve IDs en formato UUID con guiones — usamos company.id directamente.
+  const companyId = company.id;
+  const relationProperty = 'Catalogo-empresas';
 
-  if (!token || !dbId || !companiesDbId) {
-    throw new Error(
-      'Faltan NOTION_TOKEN, NOTION_DATABASE_ID o NOTION_COMPANIES_DATABASE_ID en .env'
-    );
-  }
+  // Query directa: una sola combinación conocida, sin variantes ni candidatos.
+  const data = await queryDatabase(token, dbId, {
+    filter: {
+      property: relationProperty,
+      relation: { contains: companyId },
+    },
+  });
 
-  if (!config.companySlug) {
-    throw new Error('Falta NOTION_COMPANY_SLUG en .env');
-  }
+  const pages = data.results ?? [];
+  if (pages.length > 0) return pages;
 
-  const company = await findCompanyBySlug(token, companiesDbId, config.companySlug);
-  const companyIdVariants = Array.from(
-    new Set([company.id, normalizeNotionId(company.id)])
-  );
+  // Fallback: full scan si la query filtrada no devuelve resultados.
+  const allProducts = await queryAllDatabasePages(token, dbId, {});
+  const normalizedCompanyId = normalizeNotionId(companyId);
+  return allProducts.filter((page: any) => {
+    const relationIds = [
+      ...getRelationIds(page.properties ?? {}, [relationProperty]),
+      ...getAllRelationIds(page.properties ?? {}),
+    ];
+    return relationIds.map(normalizeNotionId).includes(normalizedCompanyId);
+  });
+}
 
-  const schemaRelationProperties = await getRelationPropertiesToCompaniesDb(
-    token,
-    dbId,
-    companiesDbId
-  );
-
-  const relationPropertyCandidates = Array.from(
-    new Set([
-      ...schemaRelationProperties,
-      'Empresa',
-      'Empresas',
-      'Company',
-    ])
-  );
-  let productPages: any[] = [];
-
-  for (const propertyName of relationPropertyCandidates) {
-    for (const companyId of companyIdVariants) {
-      try {
-        const data = await queryDatabase(token, dbId, {
-          filter: {
-            property: propertyName,
-            relation: { contains: companyId },
-          },
-        });
-
-        const results = data.results ?? [];
-        if (results.length > 0) {
-          productPages = results;
-          break;
-        }
-      } catch {
-        // Continue trying next property candidate/id format.
-      }
-    }
-
-    if (productPages.length > 0) {
-      break;
-    }
-  }
-
-  if (productPages.length === 0) {
-    const allProducts = await queryAllDatabasePages(token, dbId, {});
-    productPages = allProducts.filter((page: any) => {
-      const relationIds = [
-        ...getRelationIds(page.properties ?? {}, relationPropertyCandidates),
-        ...getAllRelationIds(page.properties ?? {}),
-      ];
-      const normalizedRelationIds = relationIds.map(normalizeNotionId);
-      return companyIdVariants.some((companyId) =>
-        normalizedRelationIds.includes(normalizeNotionId(companyId))
-      );
-    });
-  }
-
-  const products = productPages.map((page: any): Product => {
+function parseProductPages(pages: any[], company: Company): Product[] {
+  return pages.map((page: any): Product => {
     const p = page.properties;
     const codeProperty = getPropertyByCandidates(p, ['Code', 'CODE', 'Código', 'Codigo']);
 
@@ -537,8 +508,68 @@ export async function getCatalogData(): Promise<CatalogData> {
       company,
     };
   });
+}
 
-  return { company, products };
+export async function getCatalogData(): Promise<CatalogData> {
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const dbId = env.NOTION_DATABASE_ID;
+  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
+
+  if (!token || !dbId || !companiesDbId) {
+    throw new Error(
+      'Faltan NOTION_TOKEN, NOTION_DATABASE_ID o NOTION_COMPANIES_DATABASE_ID en .env'
+    );
+  }
+
+  if (!config.companySlug) {
+    throw new Error('Falta NOTION_COMPANY_SLUG en .env');
+  }
+
+  const company = await findCompanyBySlug(token, companiesDbId, config.companySlug);
+  const productPages = await fetchProductPagesForCompany(token, dbId, company);
+
+  return { company, products: parseProductPages(productPages, company) };
+}
+
+/**
+ * Variante de getCatalogData que acepta un objeto Company ya resuelto para
+ * evitar una llamada extra a Notion cuando la empresa ya fue cargada previamente.
+ *
+ * @param schemaRelationProperties - Si se pasa, omite la llamada a getDatabaseSchema
+ *   (útil cuando ya se ha obtenido en paralelo en la ronda anterior).
+ */
+export async function getCatalogDataWithCompany(company: Company): Promise<CatalogData> {
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const dbId = env.NOTION_DATABASE_ID;
+  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
+
+  if (!token || !dbId || !companiesDbId) {
+    throw new Error(
+      'Faltan NOTION_TOKEN, NOTION_DATABASE_ID o NOTION_COMPANIES_DATABASE_ID en .env'
+    );
+  }
+
+  const productPages = await fetchProductPagesForCompany(token, dbId, company);
+
+  return { company, products: parseProductPages(productPages, company) };
+}
+
+/**
+ * Devuelve los nombres de propiedades de relación en la DB de productos que
+ * apuntan a la DB de empresas. Se puede llamar en paralelo con otras operaciones
+ * para pre-cargar el schema antes de buscar productos.
+ */
+export async function getProductsRelationProperties(): Promise<string[]> {
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const dbId = env.NOTION_DATABASE_ID;
+  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
+
+  if (!token || !dbId || !companiesDbId) return [];
+
+  return getRelationPropertiesToCompaniesDb(token, dbId, companiesDbId);
 }
 
 export async function getFilteredProducts(): Promise<Product[]> {
@@ -562,6 +593,82 @@ export async function getCompanyForCurrentCatalog(): Promise<Company> {
   return findCompanyBySlug(token, companiesDbId, config.companySlug);
 }
 
+/**
+ * Firma la clave en texto plano con un secreto del servidor usando HMAC-SHA256.
+ * El resultado es lo que se almacena en la cookie — nunca la clave directamente.
+ * Usa la Web Crypto API (disponible sin dependencias en Node 18+, Vercel, Cloudflare).
+ */
+export async function signAccessCookie(rawKey: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await globalThis.crypto.subtle.sign(
+    'HMAC',
+    cryptoKey,
+    encoder.encode(rawKey)
+  );
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Valida el HMAC almacenado en la cookie contra la clave real de Notion.
+ * No expone la clave en texto plano tras el momento del login.
+ */
+/**
+ * Obtiene la empresa y valida el HMAC de la cookie en una única llamada a Notion.
+ * Sustituye el par validateCompanyHmacForCurrentCatalog + getCompanyForCurrentCatalog
+ * para evitar dos queries idénticas en paralelo que Notion degrada o serializa.
+ */
+export async function resolveCompanyAccess(
+  cookieHmac: string,
+  secret: string
+): Promise<{ company: Company; isValid: boolean }> {
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
+
+  if (!token || !companiesDbId || !config.companySlug) {
+    return { company: {} as Company, isValid: false };
+  }
+
+  const { company, key } = await getCompanyRecordBySlug(token, companiesDbId, config.companySlug);
+
+  if (!cookieHmac || !secret || !key) {
+    return { company, isValid: false };
+  }
+
+  const expectedHmac = await signAccessCookie(key, secret);
+  const isValid = safeCompareSecret(expectedHmac, cookieHmac);
+
+  return { company, isValid };
+}
+
+export async function validateCompanyHmacForCurrentCatalog(
+  cookieHmac: string,
+  secret: string
+): Promise<boolean> {
+  if (!cookieHmac || !secret) return false;
+
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const companiesDbId = env.NOTION_COMPANIES_DATABASE_ID;
+
+  if (!token || !companiesDbId || !config.companySlug) return false;
+
+  const { key } = await getCompanyRecordBySlug(token, companiesDbId, config.companySlug);
+  if (!key) return false;
+
+  const expectedHmac = await signAccessCookie(key, secret);
+  return safeCompareSecret(expectedHmac, cookieHmac);
+}
+
 export async function validateCompanyKeyForCurrentCatalog(inputKey: string): Promise<boolean> {
   const env = (import.meta as any).env ?? {};
   const token = env.NOTION_TOKEN;
@@ -582,3 +689,48 @@ export async function validateCompanyKeyForCurrentCatalog(inputKey: string): Pro
 
   return safeCompareSecret(key, normalizedInputKey);
 }
+
+// ---------------------------------------------------------------------------
+// Warm-up de conexión con Notion
+//
+// La DB de productos tarda 6–8s en la primera query tras un periodo de
+// inactividad (cold start de conexión TCP/TLS con los servidores de Notion).
+// Este módulo lanza una query barata (page_size=1) al arrancar el proceso y
+// cada 4 minutos para mantener la conexión caliente.
+//
+// En servidores persistentes (astro start / Node) el intervalo se mantiene
+// activo durante toda la vida del proceso.
+// En entornos serverless (Vercel Edge/Lambda) cada invocación carga el módulo
+// de nuevo, por lo que la query inicial calienta la conexión para esa misma
+// invocación sin overhead para las siguientes requests del mismo proceso.
+// ---------------------------------------------------------------------------
+
+const WARMUP_INTERVAL_MS = 4 * 60 * 1000; // 4 minutos
+
+async function warmUpNotionConnection(): Promise<void> {
+  const env = (import.meta as any).env ?? {};
+  const token = env.NOTION_TOKEN;
+  const dbId = env.NOTION_DATABASE_ID;
+
+  if (!token || !dbId) return;
+
+  try {
+    await fetch(`${NOTION_API}/databases/${toUUID(dbId)}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Notion-Version': NOTION_VERSION,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ page_size: 1 }),
+      signal: AbortSignal.timeout(10000),
+    });
+    console.log('[notion] warm-up OK');
+  } catch {
+    // Silencioso: el warm-up es best-effort, nunca debe bloquear nada.
+  }
+}
+
+// Ejecutar inmediatamente al cargar el módulo y luego cada 4 minutos.
+warmUpNotionConnection();
+setInterval(warmUpNotionConnection, WARMUP_INTERVAL_MS);
