@@ -536,6 +536,7 @@ const itemListStructuredData = hasCatalogAccess
           return;
         }
 
+        let navigating = false;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Autenticando...';
 
@@ -554,6 +555,8 @@ const itemListStructuredData = hasCatalogAccess
           }
 
           if (response.ok && data?.success) {
+            navigating = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Cargando catálogo...';
             window.location.reload();
             return;
           }
@@ -564,8 +567,10 @@ const itemListStructuredData = hasCatalogAccess
           errorEl.textContent = 'No se pudo validar el acceso. Inténtalo de nuevo.';
           errorEl.classList.remove('hidden');
         } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Acceder';
+          if (!navigating) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Acceder';
+          }
         }
       });
     }
