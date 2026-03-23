@@ -71,9 +71,11 @@ try {
 
 if (hasCatalogAccess) {
   const { company, products: catalogProducts } = await getCatalogData();
-  products = [...(catalogProducts as ProductWithPrices[])].sort(
-    (a, b) => Number(a.customized) - Number(b.customized)
-  );
+  products = [...(catalogProducts as ProductWithPrices[])].sort((a, b) => {
+    const customizedDiff = Number(a.customized) - Number(b.customized);
+    if (customizedDiff !== 0) return customizedDiff;
+    return a.name.localeCompare(b.name, 'es');
+  });
   companyName = company?.name || config.companySlug || 'tu empresa';
   companySlug = company?.slug || config.companySlug;
   companyUrl = ensureAbsoluteUrl(company?.url);
