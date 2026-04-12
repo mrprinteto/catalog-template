@@ -34,7 +34,7 @@ function ensureAbsoluteUrl(value?: string): string {
 const CDN_IMAGE_OPTIONS = 'width=800,quality=75,format=webp';
 function getProductCdnImageUrl(code: string): string {
   if (!code) return '';
-  return `https://assets.mrprinteto.com/cdn-cgi/image/${CDN_IMAGE_OPTIONS}/products/b2b/${encodeURIComponent(code)}/1.png`;
+  return `https://assets.mrprinteto.com/cdn-cgi/image/${CDN_IMAGE_OPTIONS}/products/b2b/${encodeURIComponent(code)}/1.webp`;
 }
 
 const ACCESS_COOKIE_NAME = 'catalog_access_key';
