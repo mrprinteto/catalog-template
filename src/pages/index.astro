@@ -219,7 +219,7 @@ const itemListStructuredData = hasCatalogAccess
           Creemos que representan la esencia de tu marca y tendrán un impacto en tu audiencia.
         </p>
       </div>
-      <div class="order-1 md:order-2 flex-1 flex w-full items-center justify-center">
+      <div class="order-1 md:order-2 flex-1 flex w-full items-center justify-center" data-tour="1">
         {companyLogo && (
         <img
           src={companyLogo}
@@ -249,12 +249,10 @@ const itemListStructuredData = hasCatalogAccess
             Proyectos personalizados
           </p>
           <p class="text-slate-600 mb-2 pl-12">
-            Nos encanta colaborar y crear proyectos a medida. Si tienes una idea, podemos trabajar juntos para hacerlo realidad. <br>
-            Escríbenos por
-            <a class="text-green-100 text-xs bg-green-600 rounded-xl px-2 py-1" href="https://wa.me/34686520345?text=Hola%2C%20tengo%20una%20idea%20para%20un%20proyecto%20personalizado"> <i class="fab fa-whatsapp"></i> WhatsApp</a>
-            o
-            <a class="text-blue-100 text-xs bg-blue-600 rounded-xl px-2 py-1" href="mailto:info@mrprinteto.com"> <i class="fa fa-envelope"></i> email</a>
-            y cuéntanos tu proyecto.
+            Si buscas algún producto personalizado que no esté incluido en tu catálogo privado, no dudes en ponerte en contacto conmigo mediante 
+            <a class="text-slate-900" href="https://wa.me/34686520345?text=Hola%2C%20tengo%20una%20idea%20para%20un%20proyecto%20personalizado">Whatsapp</a>, 
+            <a class="text-slate-900" href="mailto:info@mrprinteto.com">Email</a> o 
+            <a class="text-slate-900" href="https://www.instagram.com/mrprinteto/">Instagram</a>.
           </p>
         </div>
       </div>
@@ -264,8 +262,8 @@ const itemListStructuredData = hasCatalogAccess
     <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
       <div>
         {products.length > 0 ? (
-          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {products.map((product) => {
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5" data-tour-products>
+            {products.map((product, index) => {
               const productWithPrices = product as ProductWithPrices;
               const rawPrice = typeof productWithPrices.price === 'number' ? productWithPrices.price : Number(productWithPrices.price) || 0;
               const priceX25 = typeof productWithPrices.priceX25 === 'number' ? productWithPrices.priceX25 : Number(productWithPrices.priceX25) || 0;
@@ -283,6 +281,7 @@ const itemListStructuredData = hasCatalogAccess
                   data-product-price-x25={priceX25}
                   data-product-price-x100={priceX100}
                   data-product-price-x250={pricex250}
+                  {...(index === 0 ? { 'data-tour': '2' } : {})}
                 >
                   <div class="flex justify-between items-center mb-4 gap-3">
                     <div>
@@ -356,7 +355,7 @@ const itemListStructuredData = hasCatalogAccess
       </div>
 
       <aside class="xl:sticky xl:top-6 space-y-4">
-        <section id="presupuesto" class="relative overflow-hidden rounded-2xl border border-slate-300 bg-white p-5 shadow-xl shadow-slate-500/50 font-mono" data-company-name={companyName} data-company-slug={companySlug} data-company-email={companyEmail} data-company-id={companyId}>
+        <section id="presupuesto" class="relative overflow-hidden rounded-2xl border border-slate-300 bg-white p-5 shadow-xl shadow-slate-500/50 font-mono" data-company-name={companyName} data-company-slug={companySlug} data-company-email={companyEmail} data-company-id={companyId} data-tour="3">
           <span class="pointer-events-none absolute -left-3 top-20 h-6 w-6 rounded-full bg-indigo-100"></span>
           <span class="pointer-events-none absolute -right-3 top-20 h-6 w-6 rounded-full bg-indigo-100"></span>
 
@@ -539,6 +538,7 @@ const itemListStructuredData = hasCatalogAccess
   <script>
     import '../scripts/catalog-pdf.ts';
     import '../scripts/presupuesto.ts';
+    import '../scripts/tour.ts';
   </script>
   ) : (
   <script is:inline>
