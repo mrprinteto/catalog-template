@@ -80,7 +80,7 @@ class CatalogTour {
     }
   }
 
-  private showStep(stepIndex: number): void {
+  private async showStep(stepIndex: number): Promise<void> {
     const step = TOUR_STEPS[stepIndex];
     if (!step) {
       this.end();
@@ -99,15 +99,12 @@ class CatalogTour {
       this.highlightedEl.classList.remove('tour-highlight');
     }
 
-    // Scroll al elemento
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Scroll al elemento y esperar a que termine la animación
+    await this.scrollToElementForTooltip(element, step.position);
 
-    // Aplicar highlight
-    setTimeout(() => {
-      element.classList.add('tour-highlight');
-      this.highlightedEl = element;
-      this.createTooltip(step, element, stepIndex);
-    }, 400);
+    element.classList.add('tour-highlight');
+    this.highlightedEl = element;
+    this.createTooltip(step, element, stepIndex);
   }
 
   private createTooltip(step: TourStep, element: HTMLElement, stepIndex: number): void {
@@ -164,6 +161,59 @@ class CatalogTour {
         const stepNum = parseInt(dot.getAttribute('data-step') || '0', 10);
         this.goToStep(stepNum);
       });
+    });
+  }
+
+  private scrollToElementForTooltip(element: HTMLElement, position: TourStep['position']): Promise<void> {
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const padding = 80;
+
+    let targetScrollY: number;
+
+    switch (position) {
+      case 'bottom':
+        // Elemento cerca del borde superior para que el tooltip quepa abajo
+        targetScrollY = window.scrollY + rect.top - padding;
+        break;
+      case 'top':
+        // Elemento cerca del borde inferior para que el tooltip quepa arriba
+        targetScrollY = window.scrollY + rect.bottom - viewportHeight + padding;
+        break;
+      default:
+        // Centrar verticalmente
+        targetScrollY = window.scrollY + rect.top + rect.height / 2 - viewportHeight / 2;
+    }
+
+    const target = Math.max(0, targetScrollY);
+
+    return new Promise((resolve) => {
+      // Si ya está en la posición destino, resolver inmediatamente
+      if (Math.abs(window.scrollY - target) < 1) {
+        resolve();
+        return;
+      }
+
+      let scrollEndTimer: ReturnType<typeof setTimeout>;
+
+      const onScroll = () => {
+        clearTimeout(scrollEndTimer);
+        scrollEndTimer = setTimeout(() => {
+          window.removeEventListener('scroll', onScroll);
+          resolve();
+        }, 80);
+      };
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+
+      // Fallback por si el scroll no dispara eventos
+      setTimeout(() => {
+        window.removeEventListener('scroll', onScroll);
+        clearTimeout(scrollEndTimer);
+        resolve();
+      }, 900);
+
+      window.scrollTo({ top: target, behavior: 'smooth' });
     });
   }
 
