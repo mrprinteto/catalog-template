@@ -11,19 +11,24 @@ interface TourStep {
 const TOUR_STEPS: TourStep[] = [
   {
     selector: '[data-tour="1"]',
-    text: 'Este es tu catálogo. Nadie lo puede ver y lo hemos hecho exclusivamente para ti.',
+    text: 'Este es tu catálogo. Nadie lo puede ver y lo hemos hecho exclusivamente para ti',
     position: 'bottom',
   },
   {
     selector: '[data-tour="2"]',
-    text: 'Estos son los productos que hemos diseñado para tu marca. ¡Pero podemos crear cualquier idea que tengas en mente!',
+    text: 'Estos son los productos que hemos preparado para tu marca. ¡Pero podemos crear cualquier idea que tengas en mente!',
     position: 'bottom',
   },
   {
     selector: '[data-tour="3"]',
-    text: 'Aquí tienes tu presupuesto. ¡Pero aquí no pagas nada! Si confirmas, te escribiremos para confirmar el pedido y resolver tus dudas.',
-    position: 'left',
+    text: 'Añade aquí los productos que quieras a tu presupuesto. A partir de 25 unidades, aplicamos un descuento por volumen.',
+    position: 'bottom',
   },
+  {
+    selector: '[data-tour="4"]',
+    text: 'Aquí tienes tu presupuesto, <strong>¡pero no pagas nada!</strong> <br><br> Al <span class="bg-indigo-500 text-xs text-white px-2 py-1 rounded-full "><i class="fas fa-paper-plane"></i> Confirmar presupuesto</span> te escribiremos para confirmar el pedido y realizar el pago. Si tienes alguna duda escríbeme por <span class="bg-green-500 text-xs text-white px-2 py-1 rounded-full "><i class="fab fa-whatsapp"></i> WhatsApp</span>',
+    position: 'left',
+  }
 ];
 
 const TOUR_STORAGE_KEY = 'catalog_tour_completed';
@@ -127,7 +132,7 @@ class CatalogTour {
           ${TOUR_STEPS.map((_, i) => `<span class="tour-dot ${i === stepIndex ? 'active' : ''}" data-step="${i}"></span>`).join('')}
         </div>
         <button class="tour-tooltip-btn tour-tooltip-btn-next" data-action="next">
-          ${stepIndex === TOUR_STEPS.length - 1 ? '¡Entendido!' : 'Siguiente'}
+          ${stepIndex === TOUR_STEPS.length - 1 ? "¡Listo!" : 'Siguiente'}
         </button>
       </div>
     `;
